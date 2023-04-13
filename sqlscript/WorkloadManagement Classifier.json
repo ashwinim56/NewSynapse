@@ -1,0 +1,17 @@
+{
+	"name": "WorkloadManagement Classifier",
+	"properties": {
+		"content": {
+			"query": "SELECT * FROM sys.workload_management_workload_classifiers where classifier_id <= 12",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "newdedicatedsql",
+				"poolName": "newdedicatedsql"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

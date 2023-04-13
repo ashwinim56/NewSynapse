@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 6",
+	"properties": {
+		"content": {
+			"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'newfile_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [newfile_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://newfile@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE populationdatasets (\n\t[Country (or dependency)] nvarchar(4000),\n\t[Population (2020)] bigint,\n\t[Yearly Change] nvarchar(4000),\n\t[Net Change] bigint,\n\t[Density (P/Km²)] bigint,\n\t[Land Area (Km²)] bigint,\n\t[Migrants (net)] float,\n\t[Fert. Rate] float,\n\t[Med. Age] bigint,\n\t[Urban Pop %] nvarchar(4000),\n\t[World Share] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'population_by_country_2020.csv',\n\tDATA_SOURCE = [newfile_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.population\nGO",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "Viewdemo",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

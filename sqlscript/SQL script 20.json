@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 20",
+	"properties": {
+		"content": {
+			"query": "\n\nUSE Viewdemo;\nGO\n\nDROP VIEW IF EXISTS PaymentsNew;\nGO\n\nCREATE VIEW PaymentsNew AS\nSELECT * \nFROM OPENROWSET(\n        BULK 'https://asademo01.dfs.core.windows.net/rawdata/olist_order_payments_dataset.csv',\n        FIRSTROW = 3,\n        FORMAT = 'CSV',\n        FIELDTERMINATOR =',', \n        ROWTERMINATOR = '\\n'\n    )\nWITH (\n    [order_id] VARCHAR (1000) COLLATE Latin1_General_BIN2,\n    [Payment_sequence] VARCHAR (1000) COLLATE Latin1_General_BIN2,\n     [Payment_Type] VARCHAR (1000) COLLATE Latin1_General_BIN2,\n    [Payment_Instalment] BIGINT,\n    [Payment_Value] VARCHAR (100) COLLATE Latin1_General_BIN2\n   \n) AS rows;",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "Viewdemo",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

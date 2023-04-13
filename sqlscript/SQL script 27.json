@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 27",
+	"properties": {
+		"content": {
+			"query": "-- This is auto-generated code\nSELECT\n    TOP 10 *\nFROM\n    OPENROWSET(\n        BULK 'https://asademo01.dfs.core.windows.net/rawdata/purchase.parquet',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\nSELECT\n     JSON_VALUE(device, '$.v.f[2].v') as iOSModel \n    -- first_author_name = JSON_VALUE(complex_column, '$.metadata.authors[0].first'),\n    -- body_text = JSON_VALUE(complex_column, '$.body_text.text'),\n    -- complex_column\nFROM\n    OPENROWSET(  BULK 'https://asademo01.dfs.core.windows.net/rawdata/purchase.parquet',\n        FORMAT = 'PARQUET' ) WITH ( device varchar(MAX) ) AS docs;",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

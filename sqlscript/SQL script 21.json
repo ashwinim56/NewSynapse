@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 21",
+	"properties": {
+		"content": {
+			"query": "SELECT TOP (100) [order_id]\n,[Payment_sequence]\n,[Payment_Type]\n,[Payment_Instalment]\n,[Payment_Value]\n FROM [dbo].[PaymentsNew]",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "Viewdemo",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

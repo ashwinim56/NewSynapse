@@ -1,0 +1,132 @@
+{
+	"name": "OrdersFactDF",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "olistcustomerdata",
+						"type": "DatasetReference"
+					},
+					"name": "olistorderitems"
+				},
+				{
+					"dataset": {
+						"referenceName": "olistordersdataset",
+						"type": "DatasetReference"
+					},
+					"name": "olistorders"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable3",
+						"type": "DatasetReference"
+					},
+					"name": "OrdersFactTable01"
+				}
+			],
+			"transformations": [
+				{
+					"name": "olistorderitemscol"
+				},
+				{
+					"name": "olistorderitemfinal"
+				},
+				{
+					"name": "olistordersfinal"
+				},
+				{
+					"name": "OrdersFactTable"
+				},
+				{
+					"name": "Final"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          order_id as string,",
+				"          order_item_id as integer,",
+				"          product_id as string,",
+				"          seller_id as string,",
+				"          shipping_limit_date as timestamp,",
+				"          price as float,",
+				"          freight_value as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> olistorderitems",
+				"source(output(",
+				"          order_id as string,",
+				"          customer_id as string,",
+				"          order_status as string,",
+				"          order_purchase_timestamp as string,",
+				"          order_approved_at as string,",
+				"          order_delivered_carrier_date as string,",
+				"          order_delivered_customer_date as string,",
+				"          order_estimated_delivery_date as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> olistorders",
+				"olistorderitems select(mapColumn(",
+				"          order_id,",
+				"          order_itemid = order_item_id,",
+				"          product_id,",
+				"          seller_id,",
+				"          price",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> olistorderitemscol",
+				"olistorderitemscol derive(TotalCost = multiply(order_itemid,price)) ~> olistorderitemfinal",
+				"olistorders select(mapColumn(",
+				"          order_id,",
+				"          customer_id,",
+				"          order_status,",
+				"          order_purchase_timestamp,",
+				"          order_approved_at,",
+				"          order_delivered_carrier_date,",
+				"          order_delivered_customer_date,",
+				"          order_estimated_delivery_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> olistordersfinal",
+				"olistorderitemfinal, olistordersfinal join(olistorderitemscol@order_id == olistordersfinal@order_id,",
+				"     joinType:'outer',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> OrdersFactTable",
+				"OrdersFactTable select(skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> Final",
+				"Final sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     recreate:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          order_id,",
+				"          order_itemid,",
+				"          product_id,",
+				"          seller_id,",
+				"          price,",
+				"          TotalCost,",
+				"          customer_id,",
+				"          order_status,",
+				"          order_purchase_timestamp,",
+				"          order_approved_at,",
+				"          order_delivered_carrier_date,",
+				"          order_delivered_customer_date,",
+				"          order_estimated_delivery_date",
+				"     )) ~> OrdersFactTable01"
+			]
+		}
+	}
+}

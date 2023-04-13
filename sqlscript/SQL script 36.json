@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 36",
+	"properties": {
+		"content": {
+			"query": "SELECT TOP 100 * FROM dbo.CustDB\nGo\n\n-- Explicit schema generation\nDECLARE dbo nvarchar(max)\nSELECT dbo = STUFF((\n   SELECT CONCAT(N',', j.[value], N' nvarchar(max) ''$[', j.[key], N']''')\n   FROM #Data d\n   CROSS APPLY OPENJSON(CONCAT(N'[\"', REPLACE(d.Line, ';', '\",\"'), N'\"]')) j\n   WHERE d.RowNum = 1\n   FOR XML PATH('')\n), 1, 1, N'')\n\n-- Dymanic statement\nDECLARE @stm nvarchar(max)\nSET @stm = CONCAT(\n   N'SELECT j.* FROM #Data d ',\n   N'CROSS APPLY OPENJSON(CONCAT(N''[[\"'', REPLACE(d.Line, '';'', ''\",\"''), N''\"]]'')) ',\n   N'WITH (',\n   @schema,\n   N') j WHERE d.RowNum > 1'\n)\n\n-- Execution\nEXEC sp_executesql @stm",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "DemoDB",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 32",
+	"properties": {
+		"content": {
+			"query": "SELECT TOP 100 * FROM dbo.ext\nGo",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "DemoDB",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
