@@ -1,0 +1,57 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"value": "asademo001"
+		},
+		"ASA_DL01_connectionString": {
+			"value": ""
+		},
+		"AzureDataLakeStorage1_accountKey": {
+			"value": ""
+		},
+		"AzureDataLakeStorage2_accountKey": {
+			"value": ""
+		},
+		"AzureSqlDatabase1_connectionString": {
+			"value": ""
+		},
+		"AzureSqlDatabase2_connectionString": {
+			"value": ""
+		},
+		"AzureSynapseAnalytics1_connectionString": {
+			"value": ""
+		},
+		"CosmosDb1_connectionString": {
+			"value": ""
+		},
+		"CosmosDb2_connectionString": {
+			"value": ""
+		},
+		"NewdemoDB_connectionString": {
+			"value": ""
+		},
+		"asademo001-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:asademo001.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"value": "https://asademo01.dfs.core.windows.net/"
+		},
+		"AzureDataLakeStorage2_properties_typeProperties_url": {
+			"value": "https://dataversewe01.dfs.core.windows.net/"
+		},
+		"AzureMLService1_properties_typeProperties_subscriptionId": {
+			"value": "b9cc7c61-65db-4596-83ca-48733c95aa1c"
+		},
+		"AzureMLService1_properties_typeProperties_resourceGroupName": {
+			"value": "AUTOML"
+		},
+		"asademo001-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"value": "https://asademo01.dfs.core.windows.net"
+		},
+		"nyc_tlc_fhv_sasUri": {
+			"value": ""
+		}
+	}
+}

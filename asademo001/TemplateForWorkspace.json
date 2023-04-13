@@ -1,0 +1,5555 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "asademo001"
+		},
+		"ASA_DL01_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ASA_DL01'"
+		},
+		"AzureDataLakeStorage1_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage1'"
+		},
+		"AzureDataLakeStorage2_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage2'"
+		},
+		"AzureSqlDatabase1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase1'"
+		},
+		"AzureSqlDatabase2_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase2'"
+		},
+		"AzureSynapseAnalytics1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSynapseAnalytics1'"
+		},
+		"CosmosDb1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'CosmosDb1'"
+		},
+		"CosmosDb2_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'CosmosDb2'"
+		},
+		"NewdemoDB_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'NewdemoDB'"
+		},
+		"asademo001-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'asademo001-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:asademo001.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://asademo01.dfs.core.windows.net/"
+		},
+		"AzureDataLakeStorage2_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://dataversewe01.dfs.core.windows.net/"
+		},
+		"AzureMLService1_properties_typeProperties_subscriptionId": {
+			"type": "string",
+			"defaultValue": "b9cc7c61-65db-4596-83ca-48733c95aa1c"
+		},
+		"AzureMLService1_properties_typeProperties_resourceGroupName": {
+			"type": "string",
+			"defaultValue": "AUTOML"
+		},
+		"asademo001-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://asademo01.dfs.core.windows.net"
+		},
+		"nyc_tlc_fhv_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'nyc_tlc_fhv'"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/CopySQLDBTODL')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEach_25m",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.cw_items",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy_25m",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [
+										{
+											"name": "Source",
+											"value": "dbo.@{item().source.table}"
+										},
+										{
+											"name": "Destination",
+											"value": "newfile//@{item().destination.fileName}"
+										}
+									],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"validateDataConsistency": false
+									},
+									"inputs": [
+										{
+											"referenceName": "SourceDataset_25m",
+											"type": "DatasetReference",
+											"parameters": {
+												"cw_table": "@item().source.table"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "DestinationDataset_25m",
+											"type": "DatasetReference",
+											"parameters": {
+												"cw_fileName": "@item().destination.fileName"
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"cw_items": {
+						"type": "Array",
+						"defaultValue": [
+							{
+								"source": {
+									"table": "customer"
+								},
+								"destination": {
+									"fileName": "dbocustomer.csv"
+								}
+							},
+							{
+								"source": {
+									"table": "OrdersFactTable"
+								},
+								"destination": {
+									"fileName": "dboOrdersFactTable.csv"
+								}
+							}
+						]
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-24T08:52:00Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/SourceDataset_25m')]",
+				"[concat(variables('workspaceId'), '/datasets/DestinationDataset_25m')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DataLakeToDedicatedPoolCopy')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEachTables",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "GetControlTable",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('GetControlTable').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "SetFromDateTime",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "FromDateTime",
+										"value": {
+											"value": "@item().LastCopyDateTime",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "SetToDateTime",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "ToDateTime",
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "CheckForNewFiles",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "SetToDateTime",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										},
+										{
+											"activity": "SetFromDateTime",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [
+										{
+											"name": "TABLE_NAME",
+											"value": "@item().dataLocation"
+										}
+									],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "CSVDataFiles",
+											"type": "DatasetReference",
+											"parameters": {
+												"Container": {
+													"value": "@item().SourceContainer",
+													"type": "Expression"
+												},
+												"Folder": {
+													"value": "@concat(item().Environment,'/', item().DataLocation)",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"childItems"
+										],
+										"storeSettings": {
+											"type": "AzureBlobFSReadSettings",
+											"recursive": true,
+											"modifiedDatetimeStart": {
+												"value": "@variables('FromDateTime')",
+												"type": "Expression"
+											},
+											"modifiedDatetimeEnd": {
+												"value": "@variables('ToDateTime')",
+												"type": "Expression"
+											},
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "ArchiveChangeFeed",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "IfNewFiles",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@and(startswith(item().DataLocation,'/ChangeFeed'),greater(length(activity('CheckForNewFiles').output.childItems),1))",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "DeleteFiles",
+												"type": "Delete",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"dataset": {
+														"referenceName": "CSVDataFiles",
+														"type": "DatasetReference",
+														"parameters": {
+															"Container": {
+																"value": "@item().SourceContainer",
+																"type": "Expression"
+															},
+															"Folder": {
+																"value": "@concat(item().Environment, ',',item().DataLocation)",
+																"type": "Expression"
+															}
+														}
+													},
+													"enableLogging": false,
+													"storeSettings": {
+														"type": "AzureBlobFSReadSettings",
+														"recursive": false,
+														"modifiedDatetimeStart": {
+															"value": "@variables('FromDateTime')",
+															"type": "Expression"
+														},
+														"modifiedDatetimeEnd": {
+															"value": "@variables('ToDateTime')",
+															"type": "Expression"
+														},
+														"wildcardFileName": "*.csv",
+														"enablePartitionDiscovery": false
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "IfNewFiles",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "CheckForNewFiles",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(length(activity('CheckForNewFiles').output.childItems),1)",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "CopyAndMergeData",
+												"type": "Script",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "asademo001-WorkspaceDefaultSqlServer",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"DBName": {
+															"value": "@pipeline().parameters.DbName",
+															"type": "Expression"
+														}
+													}
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "Query",
+															"text": {
+																"value": "\nDeclare @Schema nvarchar(20) = '@{item().Schema}';\nDeclare @TableName nvarchar(200) = '@{item().EntityName}';\nDeclare @Incremental bit = @{if(equals(item().LastCopyMarker,null),0,1)};\ndeclare @ChildItems nvarchar(max)='@{activity('CheckForNewFiles').output.childItems}'; \ndeclare @ToDateTime DateTime2='@{variables('ToDateTime')}'; \n\nDeclare @DataLocation varchar(2000);\n\nselect top 1  \n\t@DataLocation = DataLocation\nfrom \n\t_ControlTableForCopy \nwhere \n\tTableSchema = @Schema\n\tand TableName =  @TableName\n\n-- Update status to 1- In Progress \nUpdate _ControlTableForCopy\n\tset LastCopyStatus = 1\nwhere \n\tTableSchema = @Schema\n\tand TableName =  @TableName\n\ndeclare @LastFileName nvarchar(200);\n\nSELECT \n\t@LastFileName = max(name) \nFROM Openjson(@ChildItems) \nWITH \n\t(name nvarchar(100) '$.name') \nWHERE \n\tname != 'index.json';  \n\n-- full export, create a new table from staging table schema, copy the data and then swap the object\nIF (@Incremental = 0)\nBEGIN\n\n\tdeclare @FullCopyTemplate nvarchar(max) = 'Create Table {schema}._new_{TableName} with (Distribution = Hash(RecId)) \n\tas Select top 0 * from {schema}.{TableName}\n\n\tCopy Into {schema}._new_{TableName}\n\tFrom ''{DataLocation}''\n\tWITH (\n\t\t FILE_TYPE = ''CSV'',\n\t\t CREDENTIAL = (IDENTITY = ''Managed Identity'')\n\t );\n\n\tRENAME OBJECT::{schema}.{TableName}  TO _old_{TableName};\n\tRENAME OBJECT {schema}._new_{TableName} TO {TableName};\n\tDROP TABLE {schema}._old_{TableName};\n\t\n\tUPDATE  [dbo].[_ControlTableForCopy] \n\tSET \n\t\tLastCopyDateTime =(SELECT max([DataLakeModified_DateTime]) FROM {schema}.{TableName}), \n\t\tLastCopyMarker = ''{LastFileName}'',\n\t\tLastCopyStatus = 0\n\tWHERE \n\t\tTableSchema = ''{Schema}'' \n\t\tAND TableName = ''{TableName}''  \n\n\t'\n\n\tdeclare @FullCopyStatement nvarchar(max) = replace(replace(replace(replace(@FullCopyTemplate, '{Schema}', @Schema)\n\t\t\t\t\t\t\t\t\t\t\t\t\t, '{TableName}', @TableName)\n\t\t\t\t\t\t\t\t\t\t\t\t, '{DataLocation}', @DataLocation)\n\t\t\t\t\t\t\t\t\t\t\t\t, '{LastFileName}', @LastFileName) ;\n\tPrint(@FullCopyStatement);\n\tExecute sp_executesql  @FullCopyStatement;\n\nEND \n\n-- Incremental Table Create, Copy Into, Dedplicate and Merge\nELSE\n\tBEGIN;\n\t\tDeclare @CDCDataLocation varchar(2000);\n\t\tDeclare @CDCColumnList varchar(max);\n\t\tdeclare @UpdateColumns nvarchar(max);\n\t\tdeclare @InsertColumns nvarchar(max);\n\t\tdeclare @InsertValues nvarchar(max);\n\n\n\t\tset @CDCDataLocation = concat(SubString(@DataLocation, 0, CharIndex('/Tables/', @DataLocation)) , '/ChangeFeed/', @TableName, '/*.csv')\n\n\t\tSelect \n\t\t\t@CDCColumnList = ColumnList \n\t\tfrom _sqlmetadata \n\t\twhere \n\t\t\tEntityName = '_cdc_' + @TableName;\n\n\t\tSelect\n\t\t\t@UpdateColumns = STRING_AGG(CONVERT(NVARCHAR(max), 'T.' + COLUMN_NAME + ' = S.'  + COLUMN_NAME), ','),\n\t\t\t@InsertColumns = STRING_AGG(CONVERT(NVARCHAR(max), COLUMN_NAME), ',')\n\t\tFROM INFORMATION_SCHEMA.COLUMNS \n\t\tWHERE TABLE_NAME = @TableName\n\t\tand  TABLE_SCHEMA = @Schema\n\n\t\tset @UpdateColumns = replace(replace( @UpdateColumns, 'T._SysRowId = S._SysRowId,T.LSN = S.LSN', 'T._SysRowId = S.RecId,T.LSN = S.Start_LSN'), ',T.RecId = S.RecId', '');\n\t\tset @InsertValues = replace(@InsertColumns, '_SysRowId,LSN', 'RecId,Start_LSN');\n\n\t\tdeclare @IncrementalCopyTemplate nvarchar(max) =\n\t\t'print(''Create Table : {Schema}._cdc_{TableName}'' );\n\n\t\tcreate table {Schema}._cdc_{TableName} ({CDCColumnList})\n\t\tWith (Distribution = Hash(RecId))\n\t\t\n\t\tprint(''Copy Into : {Schema}._cdc_{TableName} {CDCColumnList}'' );\n\t\tCopy Into {Schema}._cdc_{TableName} \n\t\t\tFrom ''{CDCDataLocation}''\n\t\t\tWITH (\n\t\t\t\t\tFILE_TYPE = ''CSV'',\n\t\t\t\t\tCREDENTIAL = (IDENTITY = ''Managed Identity'')\n\t\t\t\t)\n\t\t\n\t\tprint(''Deduplicate Data: {Schema}._cdc_{TableName}'' );\n\n\t\tDelete FROM X\n\t\tFROM \n\t\t(\n\t\t\tSELECT \n\t\t\tROW_NUMBER() OVER (PARTITION BY RECID ORDER BY Start_LSN, Seq_Val, DataLakeModified_DateTime DESC) AS ROWNO,\n\t\t\t*\n\t\t\tFROM {Schema}._cdc_{TableName}\n\t\t\t\n\t\t) AS X\n\t\tWHERE X.ROWNO > 1\n\t\t\n\t\tprint(''Merge Data: {Schema}._cdc_{TableName}'' );\n\n\t\tMERGE {Schema}.{TableName} T USING {Schema}._cdc_{TableName}  S\n\t\t\tON T.RECID = S.RECID\n\t\t  WHEN MATCHED and S.DML_Action <> ''DELETE''\n\t\t\tTHEN UPDATE SET \n\t\t\t\t{UpdateColumn}\n\t\t  WHEN NOT MATCHED BY TARGET and S.DML_Action <> ''DELETE''  \n\t\t\tTHEN INSERT ({InsertColumn})\n\t\t\tValues ({InsertValues})\n\t\t  WHEN MATCHED and S.DML_Action = ''DELETE''\n\t\t\t THEN DELETE;\n\n\t\tUPDATE  [dbo].[_ControlTableForCopy] \n\t\tSET \n\t\t\tLastCopyDateTime =(SELECT max([DataLakeModified_DateTime]) FROM {schema}._cdc_{TableName}), \n\t\t\tLastCopyMarker = ''{LastFileName}'',\n\t\t\tLastCopyStatus = 0\n\t\tWHERE \n\t\tTableSchema = ''{Schema}'' \n\t\tAND TableName = ''{TableName}''   \n\n\n\t\tDrop Table {Schema}._cdc_{TableName}\n\t\t'\n\n\t\tdeclare @IncrementalCopyStatement nvarchar(max) = replace(replace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(@IncrementalCopyTemplate, '{Schema}', @Schema)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{TableName}', @TableName)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{CDCColumnList}', @CDCColumnList)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{CDCDataLocation}',@CDCDataLocation)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{UpdateColumn}', @UpdateColumns)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{InsertColumn}', @InsertColumns)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t,'{InsertValues}',@InsertValues)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{LastFileName}', @LastFileName) ;\n\n\t\tprint(@IncrementalCopyStatement);\n\t\tExecute sp_executesql  @IncrementalCopyStatement;\n\tEND;\n\t\n\t",
+																"type": "Expression"
+															}
+														}
+													],
+													"logSettings": {
+														"logDestination": "ActivityOutput"
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "GetControlTable",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlPoolSource",
+								"sqlReaderQuery": {
+									"value": "SELECT \n TableSchema as [Schema]\n, TableName as EntityName \n, Container as SourceContainer\n, Environment as Environment\n ,case \n\twhen '@{pipeline().parameters.FullCopyOnly}' = 'true' OR LastCopyDateTime is  Null \n\t\tThen replace(DataPath, '/*.csv', '')  \n\tElse \n\t\t  concat ('/ChangeFeed/', TableName)\nend as DataLocation\n,case \n\twhen '@{pipeline().parameters.FullCopyOnly}' = 'true' \n\t\tThen LastCopyMarker\n\tElse \n\t\tNull\nend as LastCopyDateTime\n,LastCopyMarker \nFROM @{pipeline().parameters.DbName}\nwhere TableSchema = '@{pipeline().parameters.Schema}'\nand TableName  = '@{pipeline().parameters.TableNames}'",
+									"type": "Expression"
+								}
+							},
+							"dataset": {
+								"referenceName": "SqlPoolTable3",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Schema": {
+						"type": "string",
+						"defaultValue": "dbo"
+					},
+					"TableNames": {
+						"type": "string"
+					},
+					"DbName": {
+						"type": "string"
+					},
+					"FullCopyOnly": {
+						"type": "bool",
+						"defaultValue": true
+					}
+				},
+				"variables": {
+					"FromDateTime": {
+						"type": "String",
+						"defaultValue": "1900-01-01T00:00:00Z"
+					},
+					"ToDateTime": {
+						"type": "String",
+						"defaultValue": "9999-12-31T00:00:00Z"
+					}
+				},
+				"folder": {
+					"name": "SynapseDedicatedTransform"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-09-15T09:48:18Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/SqlPoolTable3')]",
+				"[concat(variables('workspaceId'), '/datasets/CSVDataFiles')]",
+				"[concat(variables('workspaceId'), '/linkedServices/asademo001-WorkspaceDefaultSqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DataLakeToDedicatedPoolCopy1')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEachTables",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "GetControlTable",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('GetControlTable').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "SetFromDateTime",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "FromDateTime",
+										"value": {
+											"value": "@item().LastCopyDateTime",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "SetToDateTime",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "ToDateTime",
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "CheckForNewFiles",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "SetToDateTime",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										},
+										{
+											"activity": "SetFromDateTime",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [
+										{
+											"name": "TABLE_NAME",
+											"value": "@item().dataLocation"
+										}
+									],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "CSVDataFiles1",
+											"type": "DatasetReference",
+											"parameters": {
+												"Container": {
+													"value": "@item().SourceContainer",
+													"type": "Expression"
+												},
+												"Folder": {
+													"value": "@concat(item().Environment,'/', item().DataLocation)",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"childItems"
+										],
+										"storeSettings": {
+											"type": "AzureBlobFSReadSettings",
+											"recursive": true,
+											"modifiedDatetimeStart": {
+												"value": "@variables('FromDateTime')",
+												"type": "Expression"
+											},
+											"modifiedDatetimeEnd": {
+												"value": "@variables('ToDateTime')",
+												"type": "Expression"
+											},
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "ArchiveChangeFeed",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "IfNewFiles",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@and(startswith(item().DataLocation,'/ChangeFeed'),greater(length(activity('CheckForNewFiles').output.childItems),1))",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "DeleteFiles",
+												"type": "Delete",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"dataset": {
+														"referenceName": "CSVDataFiles1",
+														"type": "DatasetReference",
+														"parameters": {
+															"Container": {
+																"value": "@item().SourceContainer",
+																"type": "Expression"
+															},
+															"Folder": {
+																"value": "@concat(item().Environment, ',',item().DataLocation)",
+																"type": "Expression"
+															}
+														}
+													},
+													"enableLogging": false,
+													"storeSettings": {
+														"type": "AzureBlobFSReadSettings",
+														"recursive": false,
+														"modifiedDatetimeStart": {
+															"value": "@variables('FromDateTime')",
+															"type": "Expression"
+														},
+														"modifiedDatetimeEnd": {
+															"value": "@variables('ToDateTime')",
+															"type": "Expression"
+														},
+														"wildcardFileName": "*.csv",
+														"enablePartitionDiscovery": false
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "IfNewFiles",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "CheckForNewFiles",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(length(activity('CheckForNewFiles').output.childItems),1)",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "CopyAndMergeData",
+												"type": "Script",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "asademo001-WorkspaceDefaultSqlServer",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"DBName": {
+															"value": "@pipeline().parameters.DbName",
+															"type": "Expression"
+														}
+													}
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "Query",
+															"text": {
+																"value": "\nDeclare @Schema nvarchar(20) = '@{item().Schema}';\nDeclare @TableName nvarchar(200) = '@{item().EntityName}';\nDeclare @Incremental bit = @{if(equals(item().LastCopyMarker,null),0,1)};\ndeclare @ChildItems nvarchar(max)='@{activity('CheckForNewFiles').output.childItems}'; \ndeclare @ToDateTime DateTime2='@{variables('ToDateTime')}'; \n\nDeclare @DataLocation varchar(2000);\n\nselect top 1  \n\t@DataLocation = DataLocation\nfrom \n\t_ControlTableForCopy \nwhere \n\tTableSchema = @Schema\n\tand TableName =  @TableName\n\n-- Update status to 1- In Progress \nUpdate _ControlTableForCopy\n\tset LastCopyStatus = 1\nwhere \n\tTableSchema = @Schema\n\tand TableName =  @TableName\n\ndeclare @LastFileName nvarchar(200);\n\nSELECT \n\t@LastFileName = max(name) \nFROM Openjson(@ChildItems) \nWITH \n\t(name nvarchar(100) '$.name') \nWHERE \n\tname != 'index.json';  \n\n-- full export, create a new table from staging table schema, copy the data and then swap the object\nIF (@Incremental = 0)\nBEGIN\n\n\tdeclare @FullCopyTemplate nvarchar(max) = 'Create Table {schema}._new_{TableName} with (Distribution = Hash(RecId)) \n\tas Select top 0 * from {schema}.{TableName}\n\n\tCopy Into {schema}._new_{TableName}\n\tFrom ''{DataLocation}''\n\tWITH (\n\t\t FILE_TYPE = ''CSV'',\n\t\t CREDENTIAL = (IDENTITY = ''Managed Identity'')\n\t );\n\n\tRENAME OBJECT::{schema}.{TableName}  TO _old_{TableName};\n\tRENAME OBJECT {schema}._new_{TableName} TO {TableName};\n\tDROP TABLE {schema}._old_{TableName};\n\t\n\tUPDATE  [dbo].[_ControlTableForCopy] \n\tSET \n\t\tLastCopyDateTime =(SELECT max([DataLakeModified_DateTime]) FROM {schema}.{TableName}), \n\t\tLastCopyMarker = ''{LastFileName}'',\n\t\tLastCopyStatus = 0\n\tWHERE \n\t\tTableSchema = ''{Schema}'' \n\t\tAND TableName = ''{TableName}''  \n\n\t'\n\n\tdeclare @FullCopyStatement nvarchar(max) = replace(replace(replace(replace(@FullCopyTemplate, '{Schema}', @Schema)\n\t\t\t\t\t\t\t\t\t\t\t\t\t, '{TableName}', @TableName)\n\t\t\t\t\t\t\t\t\t\t\t\t, '{DataLocation}', @DataLocation)\n\t\t\t\t\t\t\t\t\t\t\t\t, '{LastFileName}', @LastFileName) ;\n\tPrint(@FullCopyStatement);\n\tExecute sp_executesql  @FullCopyStatement;\n\nEND \n\n-- Incremental Table Create, Copy Into, Dedplicate and Merge\nELSE\n\tBEGIN;\n\t\tDeclare @CDCDataLocation varchar(2000);\n\t\tDeclare @CDCColumnList varchar(max);\n\t\tdeclare @UpdateColumns nvarchar(max);\n\t\tdeclare @InsertColumns nvarchar(max);\n\t\tdeclare @InsertValues nvarchar(max);\n\n\n\t\tset @CDCDataLocation = concat(SubString(@DataLocation, 0, CharIndex('/Tables/', @DataLocation)) , '/ChangeFeed/', @TableName, '/*.csv')\n\n\t\tSelect \n\t\t\t@CDCColumnList = ColumnList \n\t\tfrom _sqlmetadata \n\t\twhere \n\t\t\tEntityName = '_cdc_' + @TableName;\n\n\t\tSelect\n\t\t\t@UpdateColumns = STRING_AGG(CONVERT(NVARCHAR(max), 'T.' + COLUMN_NAME + ' = S.'  + COLUMN_NAME), ','),\n\t\t\t@InsertColumns = STRING_AGG(CONVERT(NVARCHAR(max), COLUMN_NAME), ',')\n\t\tFROM INFORMATION_SCHEMA.COLUMNS \n\t\tWHERE TABLE_NAME = @TableName\n\t\tand  TABLE_SCHEMA = @Schema\n\n\t\tset @UpdateColumns = replace(replace( @UpdateColumns, 'T._SysRowId = S._SysRowId,T.LSN = S.LSN', 'T._SysRowId = S.RecId,T.LSN = S.Start_LSN'), ',T.RecId = S.RecId', '');\n\t\tset @InsertValues = replace(@InsertColumns, '_SysRowId,LSN', 'RecId,Start_LSN');\n\n\t\tdeclare @IncrementalCopyTemplate nvarchar(max) =\n\t\t'print(''Create Table : {Schema}._cdc_{TableName}'' );\n\n\t\tcreate table {Schema}._cdc_{TableName} ({CDCColumnList})\n\t\tWith (Distribution = Hash(RecId))\n\t\t\n\t\tprint(''Copy Into : {Schema}._cdc_{TableName} {CDCColumnList}'' );\n\t\tCopy Into {Schema}._cdc_{TableName} \n\t\t\tFrom ''{CDCDataLocation}''\n\t\t\tWITH (\n\t\t\t\t\tFILE_TYPE = ''CSV'',\n\t\t\t\t\tCREDENTIAL = (IDENTITY = ''Managed Identity'')\n\t\t\t\t)\n\t\t\n\t\tprint(''Deduplicate Data: {Schema}._cdc_{TableName}'' );\n\n\t\tDelete FROM X\n\t\tFROM \n\t\t(\n\t\t\tSELECT \n\t\t\tROW_NUMBER() OVER (PARTITION BY RECID ORDER BY Start_LSN, Seq_Val, DataLakeModified_DateTime DESC) AS ROWNO,\n\t\t\t*\n\t\t\tFROM {Schema}._cdc_{TableName}\n\t\t\t\n\t\t) AS X\n\t\tWHERE X.ROWNO > 1\n\t\t\n\t\tprint(''Merge Data: {Schema}._cdc_{TableName}'' );\n\n\t\tMERGE {Schema}.{TableName} T USING {Schema}._cdc_{TableName}  S\n\t\t\tON T.RECID = S.RECID\n\t\t  WHEN MATCHED and S.DML_Action <> ''DELETE''\n\t\t\tTHEN UPDATE SET \n\t\t\t\t{UpdateColumn}\n\t\t  WHEN NOT MATCHED BY TARGET and S.DML_Action <> ''DELETE''  \n\t\t\tTHEN INSERT ({InsertColumn})\n\t\t\tValues ({InsertValues})\n\t\t  WHEN MATCHED and S.DML_Action = ''DELETE''\n\t\t\t THEN DELETE;\n\n\t\tUPDATE  [dbo].[_ControlTableForCopy] \n\t\tSET \n\t\t\tLastCopyDateTime =(SELECT max([DataLakeModified_DateTime]) FROM {schema}._cdc_{TableName}), \n\t\t\tLastCopyMarker = ''{LastFileName}'',\n\t\t\tLastCopyStatus = 0\n\t\tWHERE \n\t\tTableSchema = ''{Schema}'' \n\t\tAND TableName = ''{TableName}''   \n\n\n\t\tDrop Table {Schema}._cdc_{TableName}\n\t\t'\n\n\t\tdeclare @IncrementalCopyStatement nvarchar(max) = replace(replace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(@IncrementalCopyTemplate, '{Schema}', @Schema)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{TableName}', @TableName)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{CDCColumnList}', @CDCColumnList)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{CDCDataLocation}',@CDCDataLocation)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{UpdateColumn}', @UpdateColumns)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{InsertColumn}', @InsertColumns)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t,'{InsertValues}',@InsertValues)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{LastFileName}', @LastFileName) ;\n\n\t\tprint(@IncrementalCopyStatement);\n\t\tExecute sp_executesql  @IncrementalCopyStatement;\n\tEND;\n\t\n\t",
+																"type": "Expression"
+															}
+														}
+													],
+													"logSettings": {
+														"logDestination": "ActivityOutput"
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "GetControlTable",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlPoolSource",
+								"sqlReaderQuery": {
+									"value": "SELECT QUOTENAME(table_Schema)+'.'+QUOTENAME(TABLE_NAME) AS Table_Name \n   FROM information_Schema.tables",
+									"type": "Expression"
+								}
+							},
+							"dataset": {
+								"referenceName": "SqlPoolTable2",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Schema": {
+						"type": "string",
+						"defaultValue": "Staging"
+					},
+					"TableNames": {
+						"type": "string",
+						"defaultValue": "VendGroup"
+					},
+					"DbName": {
+						"type": "string",
+						"defaultValue": "d365finance"
+					},
+					"FullCopyOnly": {
+						"type": "bool",
+						"defaultValue": false
+					}
+				},
+				"variables": {
+					"FromDateTime": {
+						"type": "String",
+						"defaultValue": "1900-01-01T00:00:00Z"
+					},
+					"ToDateTime": {
+						"type": "String",
+						"defaultValue": "9999-12-31T00:00:00Z"
+					}
+				},
+				"folder": {
+					"name": "SynapseDedicatedTransform"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-09-15T09:48:25Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/SqlPoolTable2')]",
+				"[concat(variables('workspaceId'), '/datasets/CSVDataFiles1')]",
+				"[concat(variables('workspaceId'), '/linkedServices/asademo001-WorkspaceDefaultSqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DataLakeToDedicatedPoolCopy2')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEachTables",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "GetControlTable",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('GetControlTable').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "SetFromDateTime",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "FromDateTime",
+										"value": {
+											"value": "@item().LastCopyDateTime",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "SetToDateTime",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "ToDateTime",
+										"value": {
+											"value": "@utcnow()",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "CheckForNewFiles",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "SetToDateTime",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										},
+										{
+											"activity": "SetFromDateTime",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [
+										{
+											"name": "TABLE_NAME",
+											"value": "@item().dataLocation"
+										}
+									],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "CSVDataFiles2",
+											"type": "DatasetReference",
+											"parameters": {
+												"Container": {
+													"value": "@item().SourceContainer",
+													"type": "Expression"
+												},
+												"Folder": {
+													"value": "@concat(item().Environment,'/', item().DataLocation)",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"childItems"
+										],
+										"storeSettings": {
+											"type": "AzureBlobFSReadSettings",
+											"recursive": true,
+											"modifiedDatetimeStart": {
+												"value": "@variables('FromDateTime')",
+												"type": "Expression"
+											},
+											"modifiedDatetimeEnd": {
+												"value": "@variables('ToDateTime')",
+												"type": "Expression"
+											},
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "ArchiveChangeFeed",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "IfNewFiles",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@and(startswith(item().DataLocation,'/ChangeFeed'),greater(length(activity('CheckForNewFiles').output.childItems),1))",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "DeleteFiles",
+												"type": "Delete",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"dataset": {
+														"referenceName": "CSVDataFiles2",
+														"type": "DatasetReference",
+														"parameters": {
+															"Container": {
+																"value": "@item().SourceContainer",
+																"type": "Expression"
+															},
+															"Folder": {
+																"value": "@concat(item().Environment, ',',item().DataLocation)",
+																"type": "Expression"
+															}
+														}
+													},
+													"enableLogging": false,
+													"storeSettings": {
+														"type": "AzureBlobFSReadSettings",
+														"recursive": false,
+														"modifiedDatetimeStart": {
+															"value": "@variables('FromDateTime')",
+															"type": "Expression"
+														},
+														"modifiedDatetimeEnd": {
+															"value": "@variables('ToDateTime')",
+															"type": "Expression"
+														},
+														"wildcardFileName": "*.csv",
+														"enablePartitionDiscovery": false
+													}
+												}
+											}
+										]
+									}
+								},
+								{
+									"name": "IfNewFiles",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "CheckForNewFiles",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(length(activity('CheckForNewFiles').output.childItems),1)",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "CopyAndMergeData",
+												"type": "Script",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"linkedServiceName": {
+													"referenceName": "ASA_DL01",
+													"type": "LinkedServiceReference"
+												},
+												"typeProperties": {
+													"scripts": [
+														{
+															"type": "Query",
+															"text": {
+																"value": "\nDeclare @Schema nvarchar(20) = '@{item().Schema}';\nDeclare @TableName nvarchar(200) = '@{item().EntityName}';\nDeclare @Incremental bit = @{if(equals(item().LastCopyMarker,null),0,1)};\ndeclare @ChildItems nvarchar(max)='@{activity('CheckForNewFiles').output.childItems}'; \ndeclare @ToDateTime DateTime2='@{variables('ToDateTime')}'; \n\nDeclare @DataLocation varchar(2000);\n\nselect top 1  \n\t@DataLocation = DataLocation\nfrom \n\t_ControlTableForCopy \nwhere \n\tTableSchema = @Schema\n\tand TableName =  @TableName\n\n-- Update status to 1- In Progress \nUpdate _ControlTableForCopy\n\tset LastCopyStatus = 1\nwhere \n\tTableSchema = @Schema\n\tand TableName =  @TableName\n\ndeclare @LastFileName nvarchar(200);\n\nSELECT \n\t@LastFileName = max(name) \nFROM Openjson(@ChildItems) \nWITH \n\t(name nvarchar(100) '$.name') \nWHERE \n\tname != 'index.json';  \n\n-- full export, create a new table from staging table schema, copy the data and then swap the object\nIF (@Incremental = 0)\nBEGIN\n\n\tdeclare @FullCopyTemplate nvarchar(max) = 'Create Table {schema}._new_{TableName} with (Distribution = Hash(RecId)) \n\tas Select top 0 * from {schema}.{TableName}\n\n\tCopy Into {schema}._new_{TableName}\n\tFrom ''{DataLocation}''\n\tWITH (\n\t\t FILE_TYPE = ''CSV'',\n\t\t CREDENTIAL = (IDENTITY = ''Managed Identity'')\n\t );\n\n\tRENAME OBJECT::{schema}.{TableName}  TO _old_{TableName};\n\tRENAME OBJECT {schema}._new_{TableName} TO {TableName};\n\tDROP TABLE {schema}._old_{TableName};\n\t\n\tUPDATE  [dbo].[_ControlTableForCopy] \n\tSET \n\t\tLastCopyDateTime =(SELECT max([DataLakeModified_DateTime]) FROM {schema}.{TableName}), \n\t\tLastCopyMarker = ''{LastFileName}'',\n\t\tLastCopyStatus = 0\n\tWHERE \n\t\tTableSchema = ''{Schema}'' \n\t\tAND TableName = ''{TableName}''  \n\n\t'\n\n\tdeclare @FullCopyStatement nvarchar(max) = replace(replace(replace(replace(@FullCopyTemplate, '{Schema}', @Schema)\n\t\t\t\t\t\t\t\t\t\t\t\t\t, '{TableName}', @TableName)\n\t\t\t\t\t\t\t\t\t\t\t\t, '{DataLocation}', @DataLocation)\n\t\t\t\t\t\t\t\t\t\t\t\t, '{LastFileName}', @LastFileName) ;\n\tPrint(@FullCopyStatement);\n\tExecute sp_executesql  @FullCopyStatement;\n\nEND \n\n-- Incremental Table Create, Copy Into, Dedplicate and Merge\nELSE\n\tBEGIN;\n\t\tDeclare @CDCDataLocation varchar(2000);\n\t\tDeclare @CDCColumnList varchar(max);\n\t\tdeclare @UpdateColumns nvarchar(max);\n\t\tdeclare @InsertColumns nvarchar(max);\n\t\tdeclare @InsertValues nvarchar(max);\n\n\n\t\tset @CDCDataLocation = concat(SubString(@DataLocation, 0, CharIndex('/Tables/', @DataLocation)) , '/ChangeFeed/', @TableName, '/*.csv')\n\n\t\tSelect \n\t\t\t@CDCColumnList = ColumnList \n\t\tfrom _sqlmetadata \n\t\twhere \n\t\t\tEntityName = '_cdc_' + @TableName;\n\n\t\tSelect\n\t\t\t@UpdateColumns = STRING_AGG(CONVERT(NVARCHAR(max), 'T.' + COLUMN_NAME + ' = S.'  + COLUMN_NAME), ','),\n\t\t\t@InsertColumns = STRING_AGG(CONVERT(NVARCHAR(max), COLUMN_NAME), ',')\n\t\tFROM INFORMATION_SCHEMA.COLUMNS \n\t\tWHERE TABLE_NAME = @TableName\n\t\tand  TABLE_SCHEMA = @Schema\n\n\t\tset @UpdateColumns = replace(replace( @UpdateColumns, 'T._SysRowId = S._SysRowId,T.LSN = S.LSN', 'T._SysRowId = S.RecId,T.LSN = S.Start_LSN'), ',T.RecId = S.RecId', '');\n\t\tset @InsertValues = replace(@InsertColumns, '_SysRowId,LSN', 'RecId,Start_LSN');\n\n\t\tdeclare @IncrementalCopyTemplate nvarchar(max) =\n\t\t'print(''Create Table : {Schema}._cdc_{TableName}'' );\n\n\t\tcreate table {Schema}._cdc_{TableName} ({CDCColumnList})\n\t\tWith (Distribution = Hash(RecId))\n\t\t\n\t\tprint(''Copy Into : {Schema}._cdc_{TableName} {CDCColumnList}'' );\n\t\tCopy Into {Schema}._cdc_{TableName} \n\t\t\tFrom ''{CDCDataLocation}''\n\t\t\tWITH (\n\t\t\t\t\tFILE_TYPE = ''CSV'',\n\t\t\t\t\tCREDENTIAL = (IDENTITY = ''Managed Identity'')\n\t\t\t\t)\n\t\t\n\t\tprint(''Deduplicate Data: {Schema}._cdc_{TableName}'' );\n\n\t\tDelete FROM X\n\t\tFROM \n\t\t(\n\t\t\tSELECT \n\t\t\tROW_NUMBER() OVER (PARTITION BY RECID ORDER BY Start_LSN, Seq_Val, DataLakeModified_DateTime DESC) AS ROWNO,\n\t\t\t*\n\t\t\tFROM {Schema}._cdc_{TableName}\n\t\t\t\n\t\t) AS X\n\t\tWHERE X.ROWNO > 1\n\t\t\n\t\tprint(''Merge Data: {Schema}._cdc_{TableName}'' );\n\n\t\tMERGE {Schema}.{TableName} T USING {Schema}._cdc_{TableName}  S\n\t\t\tON T.RECID = S.RECID\n\t\t  WHEN MATCHED and S.DML_Action <> ''DELETE''\n\t\t\tTHEN UPDATE SET \n\t\t\t\t{UpdateColumn}\n\t\t  WHEN NOT MATCHED BY TARGET and S.DML_Action <> ''DELETE''  \n\t\t\tTHEN INSERT ({InsertColumn})\n\t\t\tValues ({InsertValues})\n\t\t  WHEN MATCHED and S.DML_Action = ''DELETE''\n\t\t\t THEN DELETE;\n\n\t\tUPDATE  [dbo].[_ControlTableForCopy] \n\t\tSET \n\t\t\tLastCopyDateTime =(SELECT max([DataLakeModified_DateTime]) FROM {schema}._cdc_{TableName}), \n\t\t\tLastCopyMarker = ''{LastFileName}'',\n\t\t\tLastCopyStatus = 0\n\t\tWHERE \n\t\tTableSchema = ''{Schema}'' \n\t\tAND TableName = ''{TableName}''   \n\n\n\t\tDrop Table {Schema}._cdc_{TableName}\n\t\t'\n\n\t\tdeclare @IncrementalCopyStatement nvarchar(max) = replace(replace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\treplace(@IncrementalCopyTemplate, '{Schema}', @Schema)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{TableName}', @TableName)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{CDCColumnList}', @CDCColumnList)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{CDCDataLocation}',@CDCDataLocation)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{UpdateColumn}', @UpdateColumns)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{InsertColumn}', @InsertColumns)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t,'{InsertValues}',@InsertValues)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t, '{LastFileName}', @LastFileName) ;\n\n\t\tprint(@IncrementalCopyStatement);\n\t\tExecute sp_executesql  @IncrementalCopyStatement;\n\tEND;\n\t\n\t",
+																"type": "Expression"
+															}
+														}
+													],
+													"logSettings": {
+														"logDestination": "ActivityOutput"
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "GetControlTable",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlPoolSource",
+								"sqlReaderQuery": {
+									"value": "SELECT \n TableSchema as [Schema]\n, TableName as EntityName \n, Container as SourceContainer\n, Environment as Environment\n ,case \n\twhen '@{pipeline().parameters.FullCopyOnly}' = 'true' OR LastCopyDateTime is  Null \n\t\tThen replace(DataPath, '/*.csv', '')  \n\tElse \n\t\t  concat ('/ChangeFeed/', TableName)\nend as DataLocation\n,case \n\twhen '@{pipeline().parameters.FullCopyOnly}' = 'true' \n\t\tThen LastCopyMarker\n\tElse \n\t\tNull\nend as LastCopyDateTime\n,LastCopyMarker \nFROM [dbo].[_ControlTableForCopy]\nwhere TableSchema = '@{pipeline().parameters.Schema}'\nand ('@{pipeline().parameters.TableNames}' = '*' OR TableName  in (select value from string_split('@{pipeline().parameters.TableNames}', ',')))",
+									"type": "Expression"
+								}
+							},
+							"dataset": {
+								"referenceName": "SqlPoolTable4",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Schema": {
+						"type": "string",
+						"defaultValue": "dbo"
+					},
+					"TableNames": {
+						"type": "string",
+						"defaultValue": "*"
+					},
+					"DbName": {
+						"type": "string",
+						"defaultValue": "newdedicatedsql"
+					},
+					"FullCopyOnly": {
+						"type": "bool",
+						"defaultValue": false
+					}
+				},
+				"variables": {
+					"FromDateTime": {
+						"type": "String",
+						"defaultValue": "1900-01-01T00:00:00Z"
+					},
+					"ToDateTime": {
+						"type": "String",
+						"defaultValue": "9999-12-31T00:00:00Z"
+					}
+				},
+				"folder": {
+					"name": "SynapseDedicatedTransform"
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-09-15T09:48:31Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/SqlPoolTable4')]",
+				"[concat(variables('workspaceId'), '/datasets/CSVDataFiles2')]",
+				"[concat(variables('workspaceId'), '/linkedServices/ASA_DL01')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OrdersFactPipeline')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "OrdersFactDF",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"olistorderitems": {},
+									"olistorders": {},
+									"OrdersFactTable01": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-06-24T05:07:04Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/OrdersFactDF')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Pipeline 1')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Machine Learning Execute Pipeline1",
+						"type": "AzureMLExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"experimentName": "DemoTest",
+							"mlPipelineId": "45ec7496-ecad-492b-a054-9ad0fa700e4b"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureMLService1",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-03-15T07:23:18Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureMLService1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureSqlTable1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "NewdemoDB",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "FactsTableNew"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/NewdemoDB')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureSqlTable2')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "cosmosdb"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureSqlDatabase1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureSqlTable3')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "NewdemoDB",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "OrdersFactTab"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/NewdemoDB')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CSVDataFiles')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asademo001-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Container": {
+						"type": "string"
+					},
+					"Folder": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().Folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asademo001-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CSVDataFiles1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Container": {
+						"type": "string"
+					},
+					"Folder": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().Folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorage1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CSVDataFiles2')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Container": {
+						"type": "string"
+					},
+					"Folder": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().Folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorage1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CosmosDbSqlApiCollection1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "CosmosDb1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "CosmosDbSqlApiCollection",
+				"schema": {
+					"type": "object",
+					"properties": {
+						"name": {
+							"type": "string"
+						},
+						"location": {
+							"type": "string"
+						}
+					}
+				},
+				"typeProperties": {
+					"collectionName": "Cosmos"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/CosmosDb1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DL_01')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileSystem": "rawdata"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureDataLakeStorage1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DedicatedPool')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlPoolTable",
+				"schema": [],
+				"typeProperties": {},
+				"sqlPool": {
+					"referenceName": "newdedicatedsql",
+					"type": "SqlPoolReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/sqlPools/newdedicatedsql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DestinationDataset_25m')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asademo001-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_fileName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().cw_fileName",
+							"type": "Expression"
+						},
+						"fileSystem": "newfile"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asademo001-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SourceDataset_25m')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase1",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_table": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": {
+						"value": "@dataset().cw_table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureSqlDatabase1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlPoolTable')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"TableName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "SqlPoolTable",
+				"schema": [],
+				"typeProperties": {
+					"table": {
+						"value": "@dataset().TableName",
+						"type": "Expression"
+					}
+				},
+				"sqlPool": {
+					"referenceName": "newdedicatedsql",
+					"type": "SqlPoolReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/sqlPools/newdedicatedsql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlPoolTable1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlPoolTable",
+				"schema": [],
+				"typeProperties": {},
+				"sqlPool": {
+					"referenceName": "newdedicatedsql",
+					"type": "SqlPoolReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/sqlPools/newdedicatedsql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlPoolTable2')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlPoolTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "\\*"
+				},
+				"sqlPool": {
+					"referenceName": "newdedicatedsql",
+					"type": "SqlPoolReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/sqlPools/newdedicatedsql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlPoolTable3')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlPoolTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "*"
+				},
+				"sqlPool": {
+					"referenceName": "newdedicatedsql",
+					"type": "SqlPoolReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/sqlPools/newdedicatedsql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlPoolTable4')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlPoolTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "/*"
+				},
+				"sqlPool": {
+					"referenceName": "newdedicatedsql",
+					"type": "SqlPoolReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/sqlPools/newdedicatedsql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/olistcustomerdata')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asademo001-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "olist_order_items_dataset.csv",
+						"fileSystem": "rawdata"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "order_id",
+						"type": "String"
+					},
+					{
+						"name": "order_item_id",
+						"type": "String"
+					},
+					{
+						"name": "product_id",
+						"type": "String"
+					},
+					{
+						"name": "seller_id",
+						"type": "String"
+					},
+					{
+						"name": "shipping_limit_date",
+						"type": "String"
+					},
+					{
+						"name": "price",
+						"type": "String"
+					},
+					{
+						"name": "freight_value",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asademo001-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/olistordersdataset')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asademo001-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "olist_orders_dataset.csv",
+						"fileSystem": "rawdata"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "order_id",
+						"type": "String"
+					},
+					{
+						"name": "customer_id",
+						"type": "String"
+					},
+					{
+						"name": "order_status",
+						"type": "String"
+					},
+					{
+						"name": "order_purchase_timestamp",
+						"type": "String"
+					},
+					{
+						"name": "order_approved_at",
+						"type": "String"
+					},
+					{
+						"name": "order_delivered_carrier_date",
+						"type": "String"
+					},
+					{
+						"name": "order_delivered_customer_date",
+						"type": "String"
+					},
+					{
+						"name": "order_estimated_delivery_date",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asademo001-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ASA_DL01')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('ASA_DL01_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureDataLakeStorage1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorage1_accountKey')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureDataLakeStorage2')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage2_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorage2_accountKey')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureMLService1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureMLService",
+				"typeProperties": {
+					"subscriptionId": "[parameters('AzureMLService1_properties_typeProperties_subscriptionId')]",
+					"resourceGroupName": "[parameters('AzureMLService1_properties_typeProperties_resourceGroupName')]",
+					"mlWorkspaceName": "amlworspace",
+					"authentication": "MSI"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureSqlDatabase1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDatabase1_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureSqlDatabase2')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDatabase2_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureSynapseAnalytics1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSynapseAnalytics1_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CosmosDb1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "CosmosDb",
+				"typeProperties": {
+					"connectionString": "[parameters('CosmosDb1_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CosmosDb2')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "CosmosDb",
+				"typeProperties": {
+					"connectionString": "[parameters('CosmosDb2_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/NewdemoDB')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('NewdemoDB_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PowerBIWorkspace1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "PowerBIWorkspace",
+				"typeProperties": {
+					"workspaceID": "6b264a4b-8ece-415a-a3c5-8b66f980515a",
+					"tenantID": "81d99b48-dc6f-454f-9d99-dc64db56c397"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/asademo001-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('asademo001-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/asademo001-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('asademo001-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/nyc_tlc_fhv')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"sasUri": "[parameters('nyc_tlc_fhv_sasUri')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OrdersFactDF')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "olistcustomerdata",
+								"type": "DatasetReference"
+							},
+							"name": "olistorderitems"
+						},
+						{
+							"dataset": {
+								"referenceName": "olistordersdataset",
+								"type": "DatasetReference"
+							},
+							"name": "olistorders"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable3",
+								"type": "DatasetReference"
+							},
+							"name": "OrdersFactTable01"
+						}
+					],
+					"transformations": [
+						{
+							"name": "olistorderitemscol"
+						},
+						{
+							"name": "olistorderitemfinal"
+						},
+						{
+							"name": "olistordersfinal"
+						},
+						{
+							"name": "OrdersFactTable"
+						},
+						{
+							"name": "Final"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          order_id as string,",
+						"          order_item_id as integer,",
+						"          product_id as string,",
+						"          seller_id as string,",
+						"          shipping_limit_date as timestamp,",
+						"          price as float,",
+						"          freight_value as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> olistorderitems",
+						"source(output(",
+						"          order_id as string,",
+						"          customer_id as string,",
+						"          order_status as string,",
+						"          order_purchase_timestamp as string,",
+						"          order_approved_at as string,",
+						"          order_delivered_carrier_date as string,",
+						"          order_delivered_customer_date as string,",
+						"          order_estimated_delivery_date as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> olistorders",
+						"olistorderitems select(mapColumn(",
+						"          order_id,",
+						"          order_itemid = order_item_id,",
+						"          product_id,",
+						"          seller_id,",
+						"          price",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> olistorderitemscol",
+						"olistorderitemscol derive(TotalCost = multiply(order_itemid,price)) ~> olistorderitemfinal",
+						"olistorders select(mapColumn(",
+						"          order_id,",
+						"          customer_id,",
+						"          order_status,",
+						"          order_purchase_timestamp,",
+						"          order_approved_at,",
+						"          order_delivered_carrier_date,",
+						"          order_delivered_customer_date,",
+						"          order_estimated_delivery_date",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> olistordersfinal",
+						"olistorderitemfinal, olistordersfinal join(olistorderitemscol@order_id == olistordersfinal@order_id,",
+						"     joinType:'outer',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> OrdersFactTable",
+						"OrdersFactTable select(skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Final",
+						"Final sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     recreate:true,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          order_id,",
+						"          order_itemid,",
+						"          product_id,",
+						"          seller_id,",
+						"          price,",
+						"          TotalCost,",
+						"          customer_id,",
+						"          order_status,",
+						"          order_purchase_timestamp,",
+						"          order_approved_at,",
+						"          order_delivered_carrier_date,",
+						"          order_delivered_customer_date,",
+						"          order_estimated_delivery_date",
+						"     )) ~> OrdersFactTable01"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/olistcustomerdata')]",
+				"[concat(variables('workspaceId'), '/datasets/olistordersdataset')]",
+				"[concat(variables('workspaceId'), '/datasets/AzureSqlTable3')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ExternalTable Query')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'rawdata_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [rawdata_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://rawdata@asademo01.dfs.core.windows.net/rawdata' \n\t)\nGO\n\nCREATE EXTERNAL TABLE ListPayments3 (\n\t[order_id] nvarchar(4000),\n\t[payment_sequential] nvarchar(4000),\n\t[payment_type] nvarchar(4000),\n\t[payment_installments] nvarchar(4000),\n\t[payment_value] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'olist_order_payments_dataset.csv',\n\tDATA_SOURCE = [rawdata_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.ListPayments3\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 1')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "if db_name() = 'master'\n    throw 50001, 'This script cannot be executed in master database. Create new database and run the script there.', 1;\n\nif SERVERPROPERTY('EngineEdition') <> 11\n    throw 50001, 'This script must be executed on Azure Synapse - Serverless SQL endpoint.', 1;\n\n------------------------------------------------------------------------------------------\n--      Part 1 - Cleanup script\n--      This part removes objects from sample database\n------------------------------------------------------------------------------------------\nDROP VIEW IF EXISTS parquet.YellowTaxi\nGO\nDROP VIEW IF EXISTS json.Books\nGO\nDROP VIEW IF EXISTS csv.YellowTaxi\nGO\nDROP VIEW IF EXISTS cosmosdb.Ecdc\nGO\nIF (EXISTS(SELECT * FROM sys.external_tables WHERE name = 'Population')) BEGIN\n    DROP EXTERNAL TABLE csv.Population\nEND\nIF (EXISTS(SELECT * FROM sys.external_tables WHERE name = 'Covid')) BEGIN\n    DROP EXTERNAL TABLE delta.Covid\nEND\nIF (EXISTS(SELECT * FROM sys.external_file_formats WHERE name = 'QuotedCsvWithHeader')) BEGIN\n    DROP EXTERNAL FILE FORMAT QuotedCsvWithHeader\nEND\nGO\nIF (EXISTS(SELECT * FROM sys.external_file_formats WHERE name = 'QuotedCsvWithoutHeader')) BEGIN\n    DROP EXTERNAL FILE FORMAT QuotedCsvWithoutHeader\nEND\nGO\nIF (EXISTS(SELECT * FROM sys.external_file_formats WHERE name = 'NativeParquet')) BEGIN\n    DROP EXTERNAL FILE FORMAT NativeParquet\nEND\nGO\nIF (EXISTS(SELECT * FROM sys.external_file_formats WHERE name = 'DeltaLakeFormat')) BEGIN\n    DROP EXTERNAL FILE FORMAT DeltaLakeFormat\nEND\nGO\nDROP SCHEMA IF EXISTS parquet;\nGO\nDROP SCHEMA IF EXISTS csv;\nGO\nDROP SCHEMA IF EXISTS json;\nGO\nDROP SCHEMA IF EXISTS cosmosdb;\nGO\nDROP SCHEMA IF EXISTS delta;\nGO\nIF (EXISTS(SELECT * FROM sys.external_data_sources WHERE name = 'SqlOnDemandDemo')) BEGIN\n    DROP EXTERNAL DATA SOURCE SqlOnDemandDemo\nEND\n\nIF (EXISTS(SELECT * FROM sys.external_data_sources WHERE name = 'DeltaLakeStorage')) BEGIN\n    DROP EXTERNAL DATA SOURCE DeltaLakeStorage\nEND\n\nIF (EXISTS(SELECT * FROM sys.external_data_sources WHERE name = 'AzureOpenData')) BEGIN\n    DROP EXTERNAL DATA SOURCE AzureOpenData\nEND\n\nIF (EXISTS(SELECT * FROM sys.external_data_sources WHERE name = 'YellowTaxi')) BEGIN\n    DROP EXTERNAL DATA SOURCE YellowTaxi\nEND\n\nIF (EXISTS(SELECT * FROM sys.external_data_sources WHERE name = 'GreenTaxi')) BEGIN\n    DROP EXTERNAL DATA SOURCE GreenTaxi\nEND\n\nIF NOT EXISTS (SELECT * FROM sys.symmetric_keys) BEGIN\n    declare @pasword nvarchar(400) = CAST(newid() as VARCHAR(400));\n    EXEC('CREATE MASTER KEY ENCRYPTION BY PASSWORD = ''' + @pasword + '''')\nEND\n\nIF EXISTS\n   (SELECT * FROM sys.credentials\n   WHERE name = 'https://sqlondemandstorage.blob.core.windows.net')\n   DROP CREDENTIAL [https://sqlondemandstorage.blob.core.windows.net]\nGO\n\nIF EXISTS\n   (SELECT * FROM sys.credentials\n   WHERE name = 'MyCosmosDbAccountCredential')\n   DROP CREDENTIAL [MyCosmosDbAccountCredential]\nGO\n\nIF EXISTS\n   (SELECT * FROM sys.database_scoped_credentials\n   WHERE name = 'sqlondemand')\n   DROP DATABASE SCOPED CREDENTIAL [sqlondemand]\nGO\n\nIF EXISTS\n   (SELECT * FROM sys.database_scoped_credentials\n   WHERE name = 'WorkspaceIdentity')\n   DROP DATABASE SCOPED CREDENTIAL [WorkspaceIdentity]\nGO\n\n\n------------------------------------------------------------------------------------------\n--      Part 2 - initialization script\n--      This part creates required objects in sample database\n------------------------------------------------------------------------------------------\n\n-- create database-scoped credential for the containers in demo storage account\n-- this credential will be used in OPENROWSET function with data source that uses relative file URL\nCREATE DATABASE SCOPED CREDENTIAL [sqlondemand]\nWITH IDENTITY='SHARED ACCESS SIGNATURE',  \nSECRET = 'sv=2018-03-28&ss=bf&srt=sco&sp=rl&st=2019-10-14T12%3A10%3A25Z&se=2061-12-31T12%3A10%3A00Z&sig=KlSU2ullCscyTS0An0nozEpo4tO5JAgGBvw%2FJX2lguw%3D'\nGO\n-- Create credential that will allow user to impersonate using Managed Identity assigned to workspace\nCREATE DATABASE SCOPED CREDENTIAL WorkspaceIdentity WITH IDENTITY = 'Managed Identity'\nGO\n\n-- SQL logins only:\n-- create server-scoped credential for the containers in demo storage account\n-- SQL logins will use this credential in OPENROWSET function without data source that uses absolute file URL\nCREATE CREDENTIAL [https://sqlondemandstorage.blob.core.windows.net]\nWITH IDENTITY='SHARED ACCESS SIGNATURE',  \nSECRET = 'sv=2018-03-28&ss=bf&srt=sco&sp=rl&st=2019-10-14T12%3A10%3A25Z&se=2061-12-31T12%3A10%3A00Z&sig=KlSU2ullCscyTS0An0nozEpo4tO5JAgGBvw%2FJX2lguw%3D'\nGO\n\nCREATE CREDENTIAL MyCosmosDbAccountCredential\nWITH IDENTITY = 'SHARED ACCESS SIGNATURE', SECRET = 's5zarR2pT0JWH9k8roipnWxUYBegOuFGjJpSjGlR36y86cW0GQ6RaaG8kGjsRAQoWMw1QKTkkX8HQtFpJjC8Hg==';\nGO\n\nCREATE SCHEMA parquet;\nGO\nCREATE SCHEMA csv;\nGO\nCREATE SCHEMA json;\nGO\nCREATE SCHEMA cosmosdb;\nGO\nCREATE SCHEMA delta;\nGO\n\n-- Create external data source secured using credential\nCREATE EXTERNAL DATA SOURCE SqlOnDemandDemo WITH (\n    LOCATION = 'https://sqlondemandstorage.blob.core.windows.net',\n    CREDENTIAL = sqlondemand\n);\nGO\n\n-- Data source referencing Delta Lake folders\nCREATE EXTERNAL DATA SOURCE DeltaLakeStorage WITH (\n    LOCATION = 'https://sqlondemandstorage.blob.core.windows.net/delta-lake',\n    CREDENTIAL = sqlondemand\n);\nGO\n\n-- Create publicly available external data sources\nCREATE EXTERNAL DATA SOURCE AzureOpenData\nWITH ( LOCATION = 'https://azureopendatastorage.blob.core.windows.net/')\nGO\nCREATE EXTERNAL DATA SOURCE YellowTaxi\nWITH ( LOCATION = 'https://azureopendatastorage.blob.core.windows.net/nyctlc/yellow/')\nGO\nCREATE EXTERNAL DATA SOURCE GreenTaxi\nWITH ( LOCATION = 'https://azureopendatastorage.blob.core.windows.net/nyctlc/green/')\nGO\n\nCREATE EXTERNAL FILE FORMAT QuotedCsvWithHeader\nWITH (  \n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        FIRST_ROW = 2\n    )\n);\nGO\nCREATE EXTERNAL FILE FORMAT QuotedCsvWithoutHeader\nWITH (  \n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        FIRST_ROW = 1\n    )\n);\nGO\nCREATE EXTERNAL FILE FORMAT NativeParquet\nWITH (  \n    FORMAT_TYPE = PARQUET\n);\nGO\nCREATE EXTERNAL FILE FORMAT DeltaLakeFormat\nWITH (  \n    FORMAT_TYPE = DELTA\n);\nGO\n\nCREATE OR ALTER VIEW cosmosdb.Ecdc\nAS SELECT *\nFROM OPENROWSET(\n      PROVIDER = 'CosmosDB',\n      CONNECTION = 'Account=synapselink-cosmosdb-sqlsample;Database=covid',\n      OBJECT = 'Ecdc',\n      SERVER_CREDENTIAL = 'MyCosmosDbAccountCredential'\n    ) with ( date_rep varchar(20), cases bigint, geo_id varchar(6) ) as rows\nGO\n\n\nCREATE EXTERNAL TABLE csv.population\n(\n    [country_code] VARCHAR (5) COLLATE Latin1_General_BIN2,\n    [country_name] VARCHAR (100) COLLATE Latin1_General_BIN2,\n    [year] smallint,\n    [population] bigint\n)\nWITH (\n    LOCATION = 'csv/population/population.csv',\n    DATA_SOURCE = SqlOnDemandDemo,\n    FILE_FORMAT = QuotedCsvWithHeader\n);\nGO\n\nCREATE VIEW parquet.YellowTaxi\nAS SELECT *, nyc.filepath(1) AS [year], nyc.filepath(2) AS [month]\nFROM\n    OPENROWSET(\n        BULK 'parquet/taxi/year=*/month=*/*.parquet',\n        DATA_SOURCE = 'SqlOnDemandDemo',\n        FORMAT='PARQUET'\n    ) AS nyc\nGO\n\nCREATE VIEW csv.YellowTaxi\nAS\nSELECT  *, nyc.filepath(1) AS [year], nyc.filepath(2) AS [month]\nFROM OPENROWSET(\n        BULK 'csv/taxi/yellow_tripdata_*-*.csv',\n        DATA_SOURCE = 'SqlOnDemandDemo',\n        FORMAT = 'CSV', \n        FIRSTROW = 2\n    )\n    WITH (\n          vendor_id VARCHAR(100) COLLATE Latin1_General_BIN2, \n          pickup_datetime DATETIME2, \n          dropoff_datetime DATETIME2,\n          passenger_count INT,\n          trip_distance FLOAT,\n          rate_code INT,\n          store_and_fwd_flag VARCHAR(100) COLLATE Latin1_General_BIN2,\n          pickup_location_id INT,\n          dropoff_location_id INT,\n          payment_type INT,\n          fare_amount FLOAT,\n          extra FLOAT,\n          mta_tax FLOAT,\n          tip_amount FLOAT,\n          tolls_amount FLOAT,\n          improvement_surcharge FLOAT,\n          total_amount FLOAT\n    ) AS nyc\nGO\n\nCREATE VIEW json.Books\nAS SELECT *\nFROM\n    OPENROWSET(\n        BULK 'json/books/*.json',\n        DATA_SOURCE = 'SqlOnDemandDemo',\n        FORMAT='CSV',\n        FIELDTERMINATOR ='0x0b',\n        FIELDQUOTE = '0x0b',\n        ROWTERMINATOR = '0x0b',\n\t\tROWSET_OPTIONS = '{\"READ_OPTIONS\":[\"ALLOW_INCONSISTENT_READS\"]}'\n    )\n    WITH (\n        content varchar(8000)\n    ) AS books;\nGO\n\nCREATE EXTERNAL TABLE delta.Covid (\n     date_rep date,\n     cases int,\n     geo_id varchar(6)\n) WITH (\n        LOCATION = 'covid', --> the root folder containing the Delta Lake files\n        data_source = DeltaLakeStorage,\n        FILE_FORMAT = DeltaLakeFormat\n);",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "ViewDemoDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 10')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"metadata": {
+						"language": "sql"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 11')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"metadata": {
+						"language": "sql"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 12')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    TOP 10 C1,C2\nFROM\n    OPENROWSET(\n        BULK 'https://asademo01.dfs.core.windows.net/rawdata/olist_customers_dataset.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 13')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'rawdata_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [rawdata_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://rawdata@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE customersdata (\n\t[C1] nvarchar(4000),\n\t[C2] nvarchar(4000),\n\t[C3] nvarchar(4000),\n\t[C4] nvarchar(4000),\n\t[C5] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'olist_customers_dataset.csv',\n\tDATA_SOURCE = [rawdata_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.customersdata\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 14')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP (100) [C1]\n,[C2]\n,[C3]\n,[C4]\n,[C5]\n FROM [dbo].[Payments]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 15')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'rawdata_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [rawdata_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://rawdata@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE PaymestLists3 (\n\t[order_id] nvarchar(4000),\n\t[payment_sequential] nvarchar(4000),\n\t[payment_type] nvarchar(4000),\n\t[payment_installments] nvarchar(4000),\n\t[payment_value] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'olist_order_payments_dataset.csv',\n\tDATA_SOURCE = [rawdata_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.PaymestLists3\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 16')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'rawdata_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [rawdata_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://rawdata@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE ListPayment (\n\t[00010242fe8c5a6d1ba2dd792cb16214] nvarchar(4000),\n\t[1] bigint,\n\t[credit_card] nvarchar(4000),\n\t[2] bigint,\n\t[72.19] float\n\t)\n\tWITH (\n\tLOCATION = 'olist_order_payments_dataset.csv',\n\tDATA_SOURCE = [rawdata_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.ListPayment\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 18')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP (100) [customer_id]\n,[customer_unique_id]\n,[customer_zip_code_prefix]\n,[customer_city]\n,[customer_state]\n FROM [dbo].[CustomerOlist]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 19')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP (100) [C1]\n,[C2]\n,[C3]\n,[C4]\n,[C5]\n FROM [dbo].[Payments]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 20')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "\n\nUSE Viewdemo;\nGO\n\nDROP VIEW IF EXISTS PaymentsNew;\nGO\n\nCREATE VIEW PaymentsNew AS\nSELECT * \nFROM OPENROWSET(\n        BULK 'https://asademo01.dfs.core.windows.net/rawdata/olist_order_payments_dataset.csv',\n        FIRSTROW = 3,\n        FORMAT = 'CSV',\n        FIELDTERMINATOR =',', \n        ROWTERMINATOR = '\\n'\n    )\nWITH (\n    [order_id] VARCHAR (1000) COLLATE Latin1_General_BIN2,\n    [Payment_sequence] VARCHAR (1000) COLLATE Latin1_General_BIN2,\n     [Payment_Type] VARCHAR (1000) COLLATE Latin1_General_BIN2,\n    [Payment_Instalment] BIGINT,\n    [Payment_Value] VARCHAR (100) COLLATE Latin1_General_BIN2\n   \n) AS rows;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 21')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP (100) [order_id]\n,[Payment_sequence]\n,[Payment_Type]\n,[Payment_Instalment]\n,[Payment_Value]\n FROM [dbo].[PaymentsNew]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 22')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "DROP EXTERNAL TABLE dbo.PaymestListss\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 24')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'rawdata_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [rawdata_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://rawdata@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE Cust_Orders (\n\t[customer_id] nvarchar(4000),\n\t[customer_unique_id] nvarchar(4000),\n\t[customer_zip_code_prefix]  nvarchar(4000),\n\t[customer_city] nvarchar(4000),\n\t[customer_state] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'olist_customers_dataset.csv',\n\tDATA_SOURCE = [rawdata_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.Cust_Orders\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 25')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF (NOT EXISTS(SELECT * FROM sys.credentials WHERE name = 'cosmosdbsql0'))\n    THROW 50000, 'As a prerequisite, create a credential with Azure Cosmos DB key in SECRET option:\n    CREATE CREDENTIAL [cosmosdbsql0]\n    WITH IDENTITY = ''SHARED ACCESS SIGNATURE'', SECRET = ''B0ONTx7UMF2QgGSU0RgCMmFHjgzz6HuhWHvkyFvl5yL6B8wwnbXp8KWNjZ5m27KKM1KbfQjzWCvuWPuP5iQDHA==''', 0\nGO\n\nSELECT TOP 100 *\nFROM OPENROWSET(​PROVIDER = 'CosmosDB',\n                CONNECTION = 'Account=cosmosdbsql0;Database=cosmosdb',\n                OBJECT = 'Cosmos',\n                SERVER_CREDENTIAL = 'cosmosdbsql0'\n) AS [Cosmos]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 26')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://asademo01.dfs.core.windows.net/rawdata/Customer_dataset.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 27')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    TOP 10 *\nFROM\n    OPENROWSET(\n        BULK 'https://asademo01.dfs.core.windows.net/rawdata/purchase.parquet',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\nSELECT\n     JSON_VALUE(device, '$.v.f[2].v') as iOSModel \n    -- first_author_name = JSON_VALUE(complex_column, '$.metadata.authors[0].first'),\n    -- body_text = JSON_VALUE(complex_column, '$.body_text.text'),\n    -- complex_column\nFROM\n    OPENROWSET(  BULK 'https://asademo01.dfs.core.windows.net/rawdata/purchase.parquet',\n        FORMAT = 'PARQUET' ) WITH ( device varchar(MAX) ) AS docs;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 32')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP 100 * FROM dbo.ext\nGo",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "DemoDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 35')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP (100) [customer_id]\n,[customer_unique_id]\n,[customer_zip_code_prefix]\n,[customer_city]\n,[customer_state]\n FROM [dbo].[Cust_Orderss]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 36')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP 100 * FROM dbo.CustDB\nGo\n\n-- Explicit schema generation\nDECLARE dbo nvarchar(max)\nSELECT dbo = STUFF((\n   SELECT CONCAT(N',', j.[value], N' nvarchar(max) ''$[', j.[key], N']''')\n   FROM #Data d\n   CROSS APPLY OPENJSON(CONCAT(N'[\"', REPLACE(d.Line, ';', '\",\"'), N'\"]')) j\n   WHERE d.RowNum = 1\n   FOR XML PATH('')\n), 1, 1, N'')\n\n-- Dymanic statement\nDECLARE @stm nvarchar(max)\nSET @stm = CONCAT(\n   N'SELECT j.* FROM #Data d ',\n   N'CROSS APPLY OPENJSON(CONCAT(N''[[\"'', REPLACE(d.Line, '';'', ''\",\"''), N''\"]]'')) ',\n   N'WITH (',\n   @schema,\n   N') j WHERE d.RowNum > 1'\n)\n\n-- Execution\nEXEC sp_executesql @stm",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "DemoDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 37')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP (100) [C1]\n,[C2]\n,[C3]\n,[C4]\n,[C5]\n,[C6]\n FROM [dbo].[CustDB]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "DemoDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 4')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'newfile_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [newfile_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://newfile@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE PopulationData (\n\t[Country (or dependency)] nvarchar(4000),\n\t[Population (2020)] bigint,\n\t[Yearly Change] nvarchar(4000),\n\t[Net Change] bigint,\n\t[Density (P/Km²)] bigint,\n\t[Land Area (Km²)] bigint,\n\t[Migrants (net)] float,\n\t[Fert. Rate] float,\n\t[Med. Age] bigint,\n\t[Urban Pop %] nvarchar(4000),\n\t[World Share] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'population_by_country_2020.csv',\n\tDATA_SOURCE = [newfile_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.Population\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "ViewDemoDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 5')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'newfile_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [newfile_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://newfile@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE PopulationDataset (\n\t[Country (or dependency)] nvarchar(4000),\n\t[Population (2020)] bigint,\n\t[Yearly Change] nvarchar(4000),\n\t[Net Change] bigint,\n\t[Density (P/Km²)] bigint,\n\t[Land Area (Km²)] bigint,\n\t[Migrants (net)] float,\n\t[Fert. Rate] float,\n\t[Med. Age] bigint,\n\t[Urban Pop %] nvarchar(4000),\n\t[World Share] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'population_by_country_2020.csv',\n\tDATA_SOURCE = [newfile_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.PopulationDataset\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "ViewDemoDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 6')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseDelimitedTextFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseDelimitedTextFormat] \n\tWITH ( FORMAT_TYPE = DELIMITEDTEXT ,\n\t       FORMAT_OPTIONS (\n\t\t\t FIELD_TERMINATOR = ',',\n\t\t\t USE_TYPE_DEFAULT = FALSE\n\t\t\t))\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'newfile_asademo01_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [newfile_asademo01_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://newfile@asademo01.dfs.core.windows.net' \n\t)\nGO\n\nCREATE EXTERNAL TABLE populationdatasets (\n\t[Country (or dependency)] nvarchar(4000),\n\t[Population (2020)] bigint,\n\t[Yearly Change] nvarchar(4000),\n\t[Net Change] bigint,\n\t[Density (P/Km²)] bigint,\n\t[Land Area (Km²)] bigint,\n\t[Migrants (net)] float,\n\t[Fert. Rate] float,\n\t[Med. Age] bigint,\n\t[Urban Pop %] nvarchar(4000),\n\t[World Share] nvarchar(4000)\n\t)\n\tWITH (\n\tLOCATION = 'population_by_country_2020.csv',\n\tDATA_SOURCE = [newfile_asademo01_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseDelimitedTextFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.population\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Viewdemo",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkloadManagement Classifier')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT * FROM sys.workload_management_workload_classifiers where classifier_id <= 12",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "newdedicatedsql",
+						"poolName": "newdedicatedsql"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Boston house price prediction')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "SampleSpark",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "56g",
+					"driverCores": 8,
+					"executorMemory": "56g",
+					"executorCores": 8,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "f39895c7-ea0e-4457-ad47-73eb27ad34d8"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"synapse_widget": {
+						"version": "0.1",
+						"state": {
+							"f314ea01-8973-4e6b-b08d-36fdf28364df": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "14.5",
+												"1": "1.35472",
+												"2": "0.0",
+												"3": "8.14",
+												"4": "0.0",
+												"5": "0.538",
+												"6": "6.072",
+												"7": "100.0",
+												"8": "4.175",
+												"9": "4.0",
+												"10": "307.0",
+												"11": "21.0",
+												"12": "376.73",
+												"13": "13.04"
+											},
+											{
+												"0": "13.2",
+												"1": "1.38799",
+												"2": "0.0",
+												"3": "8.14",
+												"4": "0.0",
+												"5": "0.538",
+												"6": "5.95",
+												"7": "82.0",
+												"8": "3.99",
+												"9": "4.0",
+												"10": "307.0",
+												"11": "21.0",
+												"12": "232.6",
+												"13": "27.71"
+											},
+											{
+												"0": "13.1",
+												"1": "1.15172",
+												"2": "0.0",
+												"3": "8.14",
+												"4": "0.0",
+												"5": "0.538",
+												"6": "5.701",
+												"7": "95.0",
+												"8": "3.7872",
+												"9": "4.0",
+												"10": "307.0",
+												"11": "21.0",
+												"12": "358.77",
+												"13": "18.35"
+											},
+											{
+												"0": "13.5",
+												"1": "1.61282",
+												"2": "0.0",
+												"3": "8.14",
+												"4": "0.0",
+												"5": "0.538",
+												"6": "6.096",
+												"7": "96.9",
+												"8": "3.7598",
+												"9": "4.0",
+												"10": "307.0",
+												"11": "21.0",
+												"12": "248.31",
+												"13": "20.34"
+											},
+											{
+												"0": "18.9",
+												"1": "0.06417",
+												"2": "0.0",
+												"3": "5.96",
+												"4": "0.0",
+												"5": "0.499",
+												"6": "5.933",
+												"7": "68.2",
+												"8": "3.3603",
+												"9": "5.0",
+												"10": "279.0",
+												"11": "19.2",
+												"12": "396.9",
+												"13": "9.68"
+											},
+											{
+												"0": "20.0",
+												"1": "0.09744",
+												"2": "0.0",
+												"3": "5.96",
+												"4": "0.0",
+												"5": "0.499",
+												"6": "5.841",
+												"7": "61.4",
+												"8": "3.3779",
+												"9": "5.0",
+												"10": "279.0",
+												"11": "19.2",
+												"12": "377.56",
+												"13": "11.41"
+											},
+											{
+												"0": "21.0",
+												"1": "0.08014",
+												"2": "0.0",
+												"3": "5.96",
+												"4": "0.0",
+												"5": "0.499",
+												"6": "5.85",
+												"7": "41.5",
+												"8": "3.9342",
+												"9": "5.0",
+												"10": "279.0",
+												"11": "19.2",
+												"12": "396.9",
+												"13": "8.77"
+											},
+											{
+												"0": "24.7",
+												"1": "0.17505",
+												"2": "0.0",
+												"3": "5.96",
+												"4": "0.0",
+												"5": "0.499",
+												"6": "5.966",
+												"7": "30.2",
+												"8": "3.8473",
+												"9": "5.0",
+												"10": "279.0",
+												"11": "19.2",
+												"12": "393.43",
+												"13": "10.13"
+											},
+											{
+												"0": "30.8",
+												"1": "0.02763",
+												"2": "75.0",
+												"3": "2.95",
+												"4": "0.0",
+												"5": "0.428",
+												"6": "6.595",
+												"7": "21.8",
+												"8": "5.4011",
+												"9": "3.0",
+												"10": "252.0",
+												"11": "18.3",
+												"12": "395.63",
+												"13": "4.32"
+											},
+											{
+												"0": "34.9",
+												"1": "0.03359",
+												"2": "75.0",
+												"3": "2.95",
+												"4": "0.0",
+												"5": "0.428",
+												"6": "7.024",
+												"7": "15.8",
+												"8": "5.4011",
+												"9": "3.0",
+												"10": "252.0",
+												"11": "18.3",
+												"12": "395.62",
+												"13": "1.98"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "target",
+												"type": "double"
+											},
+											{
+												"key": "1",
+												"name": "f0",
+												"type": "double"
+											},
+											{
+												"key": "2",
+												"name": "f1",
+												"type": "double"
+											},
+											{
+												"key": "3",
+												"name": "f2",
+												"type": "double"
+											},
+											{
+												"key": "4",
+												"name": "f3",
+												"type": "double"
+											},
+											{
+												"key": "5",
+												"name": "f4",
+												"type": "double"
+											},
+											{
+												"key": "6",
+												"name": "f5",
+												"type": "double"
+											},
+											{
+												"key": "7",
+												"name": "f6",
+												"type": "double"
+											},
+											{
+												"key": "8",
+												"name": "f7",
+												"type": "double"
+											},
+											{
+												"key": "9",
+												"name": "f8",
+												"type": "double"
+											},
+											{
+												"key": "10",
+												"name": "f9",
+												"type": "double"
+											},
+											{
+												"key": "11",
+												"name": "f10",
+												"type": "double"
+											},
+											{
+												"key": "12",
+												"name": "f11",
+												"type": "double"
+											},
+											{
+												"key": "13",
+												"name": "f12",
+												"type": "double"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [
+												"1"
+											],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"526fceb1-3f7a-4f84-9ec2-dafd10be562c": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "count",
+												"1": "404",
+												"2": "404",
+												"3": "404",
+												"4": "404",
+												"5": "404",
+												"6": "404",
+												"7": "404",
+												"8": "404",
+												"9": "404",
+												"10": "404",
+												"11": "404",
+												"12": "404",
+												"13": "404",
+												"14": "404"
+											},
+											{
+												"0": "mean",
+												"1": "22.54653465346535",
+												"2": "3.4594762623762376",
+												"3": "12.387376237623762",
+												"4": "11.081386138613857",
+												"5": "0.0594059405940594",
+												"6": "0.5516482673267324",
+												"7": "6.27518811881188",
+												"8": "67.38044554455446",
+												"9": "3.8675388613861386",
+												"10": "9.158415841584159",
+												"11": "404.5990099009901",
+												"12": "18.460643564356428",
+												"13": "355.57777227722704",
+												"14": "12.477945544554453"
+											},
+											{
+												"0": "stddev",
+												"1": "8.98063883126667",
+												"2": "8.963989468570858",
+												"3": "24.736107242965968",
+												"4": "6.932029021988665",
+												"5": "0.23667599606006476",
+												"6": "0.11667525810157786",
+												"7": "0.6676242752927922",
+												"8": "28.53180696580572",
+												"9": "2.1454416420989646",
+												"10": "8.522028292531425",
+												"11": "165.29089358685016",
+												"12": "2.1828023015213165",
+												"13": "92.50099254507464",
+												"14": "7.0415410412239074"
+											},
+											{
+												"0": "min",
+												"1": "5.0",
+												"2": "0.00632",
+												"3": "0.0",
+												"4": "0.46",
+												"5": "0.0",
+												"6": "0.385",
+												"7": "3.863",
+												"8": "2.9",
+												"9": "1.137",
+												"10": "1.0",
+												"11": "187.0",
+												"12": "12.6",
+												"13": "2.52",
+												"14": "1.73"
+											},
+											{
+												"0": "25%",
+												"1": "17.3",
+												"2": "0.0795",
+												"3": "0.0",
+												"4": "5.13",
+												"5": "0.0",
+												"6": "0.448",
+												"7": "5.885",
+												"8": "41.9",
+												"9": "2.1069",
+												"10": "4.0",
+												"11": "280.0",
+												"12": "17.3",
+												"13": "374.68",
+												"14": "6.87"
+											},
+											{
+												"0": "50%",
+												"1": "21.1",
+												"2": "0.2498",
+												"3": "0.0",
+												"4": "8.56",
+												"5": "0.0",
+												"6": "0.538",
+												"7": "6.172",
+												"8": "75.0",
+												"9": "3.3175",
+												"10": "5.0",
+												"11": "330.0",
+												"12": "19.0",
+												"13": "391.34",
+												"14": "11.38"
+											},
+											{
+												"0": "75%",
+												"1": "24.8",
+												"2": "2.77974",
+												"3": "17.5",
+												"4": "18.1",
+												"5": "0.0",
+												"6": "0.624",
+												"7": "6.59",
+												"8": "94.0",
+												"9": "5.2447",
+												"10": "8.0",
+												"11": "666.0",
+												"12": "20.2",
+												"13": "395.77",
+												"14": "16.3"
+											},
+											{
+												"0": "max",
+												"1": "50.0",
+												"2": "88.9762",
+												"3": "100.0",
+												"4": "27.74",
+												"5": "1.0",
+												"6": "0.871",
+												"7": "8.78",
+												"8": "100.0",
+												"9": "12.1265",
+												"10": "24.0",
+												"11": "711.0",
+												"12": "22.0",
+												"13": "396.9",
+												"14": "37.97"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "summary",
+												"type": "string"
+											},
+											{
+												"key": "1",
+												"name": "target",
+												"type": "string"
+											},
+											{
+												"key": "2",
+												"name": "f0",
+												"type": "string"
+											},
+											{
+												"key": "3",
+												"name": "f1",
+												"type": "string"
+											},
+											{
+												"key": "4",
+												"name": "f2",
+												"type": "string"
+											},
+											{
+												"key": "5",
+												"name": "f3",
+												"type": "string"
+											},
+											{
+												"key": "6",
+												"name": "f4",
+												"type": "string"
+											},
+											{
+												"key": "7",
+												"name": "f5",
+												"type": "string"
+											},
+											{
+												"key": "8",
+												"name": "f6",
+												"type": "string"
+											},
+											{
+												"key": "9",
+												"name": "f7",
+												"type": "string"
+											},
+											{
+												"key": "10",
+												"name": "f8",
+												"type": "string"
+											},
+											{
+												"key": "11",
+												"name": "f9",
+												"type": "string"
+											},
+											{
+												"key": "12",
+												"name": "f10",
+												"type": "string"
+											},
+											{
+												"key": "13",
+												"name": "f11",
+												"type": "string"
+											},
+											{
+												"key": "14",
+												"name": "f12",
+												"type": "string"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "count",
+											"categoryFieldKeys": [
+												"0"
+											],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"27e781bf-e350-466b-b357-db9cb21dde62": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "5.0",
+												"1": {
+													"type": 1,
+													"values": [
+														38.3518,
+														0,
+														18.1,
+														0,
+														0.693,
+														5.453,
+														100,
+														1.4896,
+														24,
+														666,
+														20.2,
+														396.9,
+														30.59
+													]
+												}
+											},
+											{
+												"0": "5.0",
+												"1": {
+													"type": 1,
+													"values": [
+														67.9208,
+														0,
+														18.1,
+														0,
+														0.693,
+														5.683,
+														100,
+														1.4254,
+														24,
+														666,
+														20.2,
+														384.97,
+														22.98
+													]
+												}
+											},
+											{
+												"0": "6.3",
+												"1": {
+													"type": 1,
+													"values": [
+														9.91655,
+														0,
+														18.1,
+														0,
+														0.693,
+														5.852,
+														77.8,
+														1.5004,
+														24,
+														666,
+														20.2,
+														338.16,
+														29.97
+													]
+												}
+											},
+											{
+												"0": "7.0",
+												"1": {
+													"type": 1,
+													"values": [
+														0.18337,
+														0,
+														27.74,
+														0,
+														0.609,
+														5.414,
+														98.3,
+														1.7554,
+														4,
+														711,
+														20.1,
+														344.05,
+														23.97
+													]
+												}
+											},
+											{
+												"0": "7.0",
+												"1": {
+													"type": 1,
+													"values": [
+														45.7461,
+														0,
+														18.1,
+														0,
+														0.693,
+														4.519,
+														100,
+														1.6582,
+														24,
+														666,
+														20.2,
+														88.27,
+														36.98
+													]
+												}
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 1,
+													"values": [
+														16.8118,
+														0,
+														18.1,
+														0,
+														0.7,
+														5.277,
+														98.1,
+														1.4261,
+														24,
+														666,
+														20.2,
+														396.9,
+														30.81
+													]
+												}
+											},
+											{
+												"0": "7.5",
+												"1": {
+													"type": 1,
+													"values": [
+														10.8342,
+														0,
+														18.1,
+														0,
+														0.679,
+														6.782,
+														90.8,
+														1.8195,
+														24,
+														666,
+														20.2,
+														21.57,
+														25.79
+													]
+												}
+											},
+											{
+												"0": "8.1",
+												"1": {
+													"type": 1,
+													"values": [
+														0.20746,
+														0,
+														27.74,
+														0,
+														0.609,
+														5.093,
+														98,
+														1.8226,
+														4,
+														711,
+														20.1,
+														318.43,
+														29.68
+													]
+												}
+											},
+											{
+												"0": "8.3",
+												"1": {
+													"type": 1,
+													"values": [
+														15.8603,
+														0,
+														18.1,
+														0,
+														0.679,
+														5.896,
+														95.4,
+														1.9096,
+														24,
+														666,
+														20.2,
+														7.68,
+														24.39
+													]
+												}
+											},
+											{
+												"0": "8.4",
+												"1": {
+													"type": 1,
+													"values": [
+														11.8123,
+														0,
+														18.1,
+														0,
+														0.718,
+														6.824,
+														76.5,
+														1.794,
+														24,
+														666,
+														20.2,
+														48.45,
+														22.74
+													]
+												}
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "target",
+												"type": "double"
+											},
+											{
+												"key": "1",
+												"name": "features",
+												"type": "org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"fa1b58a6-b966-4118-8dde-8384e0a79e76": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "5.6",
+												"1": {
+													"type": 1,
+													"values": [
+														25.0461,
+														0,
+														18.1,
+														0,
+														0.693,
+														5.987,
+														100,
+														1.5888,
+														24,
+														666,
+														20.2,
+														396.9,
+														26.77
+													]
+												},
+												"2": "12.425912708228282"
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 1,
+													"values": [
+														14.2362,
+														0,
+														18.1,
+														0,
+														0.693,
+														6.343,
+														100,
+														1.5741,
+														24,
+														666,
+														20.2,
+														396.9,
+														20.32
+													]
+												},
+												"2": "18.091852927872758"
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 1,
+													"values": [
+														18.0846,
+														0,
+														18.1,
+														0,
+														0.679,
+														6.434,
+														100,
+														1.8347,
+														24,
+														666,
+														20.2,
+														27.25,
+														29.05
+													]
+												},
+												"2": "10.427833690739433"
+											},
+											{
+												"0": "7.4",
+												"1": {
+													"type": 1,
+													"values": [
+														22.5971,
+														0,
+														18.1,
+														0,
+														0.7,
+														5,
+														89.5,
+														1.5184,
+														24,
+														666,
+														20.2,
+														396.9,
+														31.99
+													]
+												},
+												"2": "6.049765880921164"
+											},
+											{
+												"0": "8.3",
+												"1": {
+													"type": 1,
+													"values": [
+														24.8017,
+														0,
+														18.1,
+														0,
+														0.693,
+														5.349,
+														96,
+														1.7028,
+														24,
+														666,
+														20.2,
+														396.9,
+														19.77
+													]
+												},
+												"2": "12.678250802422045"
+											},
+											{
+												"0": "8.8",
+												"1": {
+													"type": 1,
+													"values": [
+														20.0849,
+														0,
+														18.1,
+														0,
+														0.7,
+														4.368,
+														91.2,
+														1.4395,
+														24,
+														666,
+														20.2,
+														285.83,
+														30.63
+													]
+												},
+												"2": "3.1938159874185885"
+											},
+											{
+												"0": "9.7",
+												"1": {
+													"type": 1,
+													"values": [
+														11.5779,
+														0,
+														18.1,
+														0,
+														0.7,
+														5.036,
+														97,
+														1.77,
+														24,
+														666,
+														20.2,
+														396.9,
+														25.68
+													]
+												},
+												"2": "9.891498518873956"
+											},
+											{
+												"0": "10.5",
+												"1": {
+													"type": 1,
+													"values": [
+														22.0511,
+														0,
+														18.1,
+														0,
+														0.74,
+														5.818,
+														92.4,
+														1.8662,
+														24,
+														666,
+														20.2,
+														391.45,
+														22.11
+													]
+												},
+												"2": "12.843366246341741"
+											},
+											{
+												"0": "10.5",
+												"1": {
+													"type": 1,
+													"values": [
+														24.3938,
+														0,
+														18.1,
+														0,
+														0.7,
+														4.652,
+														100,
+														1.4672,
+														24,
+														666,
+														20.2,
+														396.9,
+														28.28
+													]
+												},
+												"2": "6.0295799073536145"
+											},
+											{
+												"0": "10.9",
+												"1": {
+													"type": 1,
+													"values": [
+														15.8744,
+														0,
+														18.1,
+														0,
+														0.671,
+														6.545,
+														99.1,
+														1.5192,
+														24,
+														666,
+														20.2,
+														396.9,
+														21.08
+													]
+												},
+												"2": "18.936535174381074"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "target",
+												"type": "double"
+											},
+											{
+												"key": "1",
+												"name": "features",
+												"type": "org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7"
+											},
+											{
+												"key": "2",
+												"name": "prediction",
+												"type": "double"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [
+												"2"
+											],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"e0193f92-c459-4785-b157-f4b7e73f7d20": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "Spark MLlib - Linear Regression",
+												"1": "24.92643840415788",
+												"2": "4.992638421131445",
+												"3": "0.7510580823593881",
+												"4": "3.515918087212872"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "model",
+												"type": "string"
+											},
+											{
+												"key": "1",
+												"name": "mean_squared_error",
+												"type": "double"
+											},
+											{
+												"key": "2",
+												"name": "root_mean_squared_error",
+												"type": "double"
+											},
+											{
+												"key": "3",
+												"name": "R^2",
+												"type": "double"
+											},
+											{
+												"key": "4",
+												"name": "mean_absolute_error",
+												"type": "double"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [
+												"0"
+											],
+											"seriesFieldKeys": [
+												"1"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"868d44b2-a177-4040-80ab-bac3a8be1f28": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "5.0",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														100,
+														18.1,
+														1.4896,
+														666,
+														24,
+														30.59,
+														5.453,
+														396.9,
+														38.3518,
+														0.693
+													]
+												}
+											},
+											{
+												"0": "5.0",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														100,
+														18.1,
+														1.4254,
+														666,
+														24,
+														22.98,
+														5.683,
+														384.97,
+														67.9208,
+														0.693
+													]
+												}
+											},
+											{
+												"0": "6.3",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														77.8,
+														18.1,
+														1.5004,
+														666,
+														24,
+														29.97,
+														5.852,
+														338.16,
+														9.91655,
+														0.693
+													]
+												}
+											},
+											{
+												"0": "7.0",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.1,
+														98.3,
+														27.74,
+														1.7554,
+														711,
+														4,
+														23.97,
+														5.414,
+														344.05,
+														0.18337,
+														0.609
+													]
+												}
+											},
+											{
+												"0": "7.0",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														100,
+														18.1,
+														1.6582,
+														666,
+														24,
+														36.98,
+														4.519,
+														88.27,
+														45.7461,
+														0.693
+													]
+												}
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														98.1,
+														18.1,
+														1.4261,
+														666,
+														24,
+														30.81,
+														5.277,
+														396.9,
+														16.8118,
+														0.7
+													]
+												}
+											},
+											{
+												"0": "7.5",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														90.8,
+														18.1,
+														1.8195,
+														666,
+														24,
+														25.79,
+														6.782,
+														21.57,
+														10.8342,
+														0.679
+													]
+												}
+											},
+											{
+												"0": "8.1",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.1,
+														98,
+														27.74,
+														1.8226,
+														711,
+														4,
+														29.68,
+														5.093,
+														318.43,
+														0.20746,
+														0.609
+													]
+												}
+											},
+											{
+												"0": "8.3",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														95.4,
+														18.1,
+														1.9096,
+														666,
+														24,
+														24.39,
+														5.896,
+														7.68,
+														15.8603,
+														0.679
+													]
+												}
+											},
+											{
+												"0": "8.4",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														76.5,
+														18.1,
+														1.794,
+														666,
+														24,
+														22.74,
+														6.824,
+														48.45,
+														11.8123,
+														0.718
+													]
+												}
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "target",
+												"type": "double"
+											},
+											{
+												"key": "1",
+												"name": "features",
+												"type": "org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"aed07095-81c2-40ed-b09d-fac20a845c83": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "5.6",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														100,
+														18.1,
+														1.5888,
+														666,
+														24,
+														26.77,
+														5.987,
+														396.9,
+														25.0461,
+														0.693
+													]
+												},
+												"2": "33.079368591308594",
+												"3": "33.079368591308594"
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														100,
+														18.1,
+														1.5741,
+														666,
+														24,
+														20.32,
+														6.343,
+														396.9,
+														14.2362,
+														0.693
+													]
+												},
+												"2": "40.372337341308594",
+												"3": "40.372337341308594"
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														100,
+														18.1,
+														1.8347,
+														666,
+														24,
+														29.05,
+														6.434,
+														27.25,
+														18.0846,
+														0.679
+													]
+												},
+												"2": "29.140405654907227",
+												"3": "29.140405654907227"
+											},
+											{
+												"0": "7.4",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														89.5,
+														18.1,
+														1.5184,
+														666,
+														24,
+														31.99,
+														5,
+														396.9,
+														22.5971,
+														0.7
+													]
+												},
+												"2": "28.2320556640625",
+												"3": "28.2320556640625"
+											},
+											{
+												"0": "8.3",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														96,
+														18.1,
+														1.7028,
+														666,
+														24,
+														19.77,
+														5.349,
+														396.9,
+														24.8017,
+														0.693
+													]
+												},
+												"2": "34.082637786865234",
+												"3": "34.082637786865234"
+											},
+											{
+												"0": "8.8",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														91.2,
+														18.1,
+														1.4395,
+														666,
+														24,
+														30.63,
+														4.368,
+														285.83,
+														20.0849,
+														0.7
+													]
+												},
+												"2": "26.424739837646484",
+												"3": "26.424739837646484"
+											},
+											{
+												"0": "9.7",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														97,
+														18.1,
+														1.77,
+														666,
+														24,
+														25.68,
+														5.036,
+														396.9,
+														11.5779,
+														0.7
+													]
+												},
+												"2": "34.44858169555664",
+												"3": "34.44858169555664"
+											},
+											{
+												"0": "10.5",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														92.4,
+														18.1,
+														1.8662,
+														666,
+														24,
+														22.11,
+														5.818,
+														391.45,
+														22.0511,
+														0.74
+													]
+												},
+												"2": "34.5134162902832",
+												"3": "34.5134162902832"
+											},
+											{
+												"0": "10.5",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														100,
+														18.1,
+														1.4672,
+														666,
+														24,
+														28.28,
+														4.652,
+														396.9,
+														24.3938,
+														0.7
+													]
+												},
+												"2": "28.64730453491211",
+												"3": "28.64730453491211"
+											},
+											{
+												"0": "10.9",
+												"1": {
+													"type": 0,
+													"size": 1073741824,
+													"indices": [
+														287408178,
+														419613213,
+														464140333,
+														556319843,
+														584064458,
+														780495775,
+														824677867,
+														851899283,
+														921728202,
+														933181289,
+														1055634727
+													],
+													"values": [
+														20.2,
+														99.1,
+														18.1,
+														1.5192,
+														666,
+														24,
+														21.08,
+														6.545,
+														396.9,
+														15.8744,
+														0.671
+													]
+												},
+												"2": "40.45200729370117",
+												"3": "40.45200729370117"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "target",
+												"type": "double"
+											},
+											{
+												"key": "1",
+												"name": "features",
+												"type": "org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7"
+											},
+											{
+												"key": "2",
+												"name": "rawPrediction",
+												"type": "double"
+											},
+											{
+												"key": "3",
+												"name": "prediction",
+												"type": "double"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [
+												"2"
+											],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"261fb002-8d86-44fe-91a0-6377acbfc1fc": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "Spark MLlib - Linear Regression",
+												"1": "24.92643840415788",
+												"2": "4.992638421131445",
+												"3": "0.7510580823593881",
+												"4": "3.515918087212872"
+											},
+											{
+												"0": "Vowpal Wabbit",
+												"1": "324.95461942303706",
+												"2": "18.02649770263312",
+												"3": "-2.2453423466969245",
+												"4": "16.76088128557392"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "model",
+												"type": "string"
+											},
+											{
+												"key": "1",
+												"name": "mean_squared_error",
+												"type": "double"
+											},
+											{
+												"key": "2",
+												"name": "root_mean_squared_error",
+												"type": "double"
+											},
+											{
+												"key": "3",
+												"name": "R^2",
+												"type": "double"
+											},
+											{
+												"key": "4",
+												"name": "mean_absolute_error",
+												"type": "double"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [
+												"0"
+											],
+											"seriesFieldKeys": [
+												"1"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"808b4e2a-aed9-4208-a6fc-c4993d11b905": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "5.6",
+												"1": {
+													"type": 1,
+													"values": [
+														25.0461,
+														0,
+														18.1,
+														0,
+														0.693,
+														5.987,
+														100,
+														1.5888,
+														24,
+														666,
+														20.2,
+														396.9,
+														26.77
+													]
+												},
+												"2": "8.299484569945886"
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 1,
+													"values": [
+														14.2362,
+														0,
+														18.1,
+														0,
+														0.693,
+														6.343,
+														100,
+														1.5741,
+														24,
+														666,
+														20.2,
+														396.9,
+														20.32
+													]
+												},
+												"2": "10.121720926091578"
+											},
+											{
+												"0": "7.2",
+												"1": {
+													"type": 1,
+													"values": [
+														18.0846,
+														0,
+														18.1,
+														0,
+														0.679,
+														6.434,
+														100,
+														1.8347,
+														24,
+														666,
+														20.2,
+														27.25,
+														29.05
+													]
+												},
+												"2": "8.013533609234399"
+											},
+											{
+												"0": "7.4",
+												"1": {
+													"type": 1,
+													"values": [
+														22.5971,
+														0,
+														18.1,
+														0,
+														0.7,
+														5,
+														89.5,
+														1.5184,
+														24,
+														666,
+														20.2,
+														396.9,
+														31.99
+													]
+												},
+												"2": "7.449539495962057"
+											},
+											{
+												"0": "8.3",
+												"1": {
+													"type": 1,
+													"values": [
+														24.8017,
+														0,
+														18.1,
+														0,
+														0.693,
+														5.349,
+														96,
+														1.7028,
+														24,
+														666,
+														20.2,
+														396.9,
+														19.77
+													]
+												},
+												"2": "9.487400634994824"
+											},
+											{
+												"0": "8.8",
+												"1": {
+													"type": 1,
+													"values": [
+														20.0849,
+														0,
+														18.1,
+														0,
+														0.7,
+														4.368,
+														91.2,
+														1.4395,
+														24,
+														666,
+														20.2,
+														285.83,
+														30.63
+													]
+												},
+												"2": "7.4754323630329305"
+											},
+											{
+												"0": "9.7",
+												"1": {
+													"type": 1,
+													"values": [
+														11.5779,
+														0,
+														18.1,
+														0,
+														0.7,
+														5.036,
+														97,
+														1.77,
+														24,
+														666,
+														20.2,
+														396.9,
+														25.68
+													]
+												},
+												"2": "8.24097822817968"
+											},
+											{
+												"0": "10.5",
+												"1": {
+													"type": 1,
+													"values": [
+														22.0511,
+														0,
+														18.1,
+														0,
+														0.74,
+														5.818,
+														92.4,
+														1.8662,
+														24,
+														666,
+														20.2,
+														391.45,
+														22.11
+													]
+												},
+												"2": "7.896767979323552"
+											},
+											{
+												"0": "10.5",
+												"1": {
+													"type": 1,
+													"values": [
+														24.3938,
+														0,
+														18.1,
+														0,
+														0.7,
+														4.652,
+														100,
+														1.4672,
+														24,
+														666,
+														20.2,
+														396.9,
+														28.28
+													]
+												},
+												"2": "7.5362974916226"
+											},
+											{
+												"0": "10.9",
+												"1": {
+													"type": 1,
+													"values": [
+														15.8744,
+														0,
+														18.1,
+														0,
+														0.671,
+														6.545,
+														99.1,
+														1.5192,
+														24,
+														666,
+														20.2,
+														396.9,
+														21.08
+													]
+												},
+												"2": "10.11527720279883"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "target",
+												"type": "double"
+											},
+											{
+												"key": "1",
+												"name": "features",
+												"type": "org.apache.spark.ml.linalg.VectorUDT@3bfc3ba7"
+											},
+											{
+												"key": "2",
+												"name": "prediction",
+												"type": "double"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [
+												"2"
+											],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							},
+							"801bed8d-2708-494c-829a-bf96bc9738ee": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": "Spark MLlib - Linear Regression",
+												"1": "24.92643840415788",
+												"2": "4.992638421131445",
+												"3": "0.7510580823593881",
+												"4": "3.515918087212872"
+											},
+											{
+												"0": "Vowpal Wabbit",
+												"1": "324.95461942303706",
+												"2": "18.02649770263312",
+												"3": "-2.2453423466969245",
+												"4": "16.76088128557392"
+											},
+											{
+												"0": "LightGBM",
+												"1": "20.04796613915392",
+												"2": "4.477495520841302",
+												"3": "0.7997796935705608",
+												"4": "2.4181816323266268"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "model",
+												"type": "string"
+											},
+											{
+												"key": "1",
+												"name": "mean_squared_error",
+												"type": "double"
+											},
+											{
+												"key": "2",
+												"name": "root_mean_squared_error",
+												"type": "double"
+											},
+											{
+												"key": "3",
+												"name": "R^2",
+												"type": "double"
+											},
+											{
+												"key": "4",
+												"name": "mean_absolute_error",
+												"type": "double"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "sum",
+											"categoryFieldKeys": [
+												"0"
+											],
+											"seriesFieldKeys": [
+												"1"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							}
+						}
+					},
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/b9cc7c61-65db-4596-83ca-48733c95aa1c/resourceGroups/SynapseAnalytics/providers/Microsoft.Synapse/workspaces/asademo001/bigDataPools/SampleSpark",
+						"name": "SampleSpark",
+						"type": "Spark",
+						"endpoint": "https://asademo001.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/SampleSpark",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net",
+							"authHeader": null
+						},
+						"sparkVersion": "3.1",
+						"nodeCount": 3,
+						"cores": 8,
+						"memory": 56,
+						"extraHeader": null
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "markdown",
+						"source": [
+							"# Boston house price prediction with Vowpal Wabbit, LightGBM and Spark MLlib\n",
+							"\n",
+							"This notebook shows how to build simple regression models by using \n",
+							"[Vowpal Wabbit (VW)](https://github.com/VowpalWabbit/vowpal_wabbit) and \n",
+							"[LightGBM](https://github.com/microsoft/LightGBM) with MMLSpark.\n",
+							" We also compare the results with \n",
+							" [Spark MLlib Linear Regression](https://spark.apache.org/docs/latest/ml-classification-regression.html#linear-regression)."
+						]
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"import math\n",
+							"from matplotlib.colors import ListedColormap, Normalize\n",
+							"from matplotlib.cm import get_cmap\n",
+							"import matplotlib.pyplot as plt\n",
+							"from mmlspark.train import ComputeModelStatistics\n",
+							"from mmlspark.vw import VowpalWabbitRegressor, VowpalWabbitFeaturizer\n",
+							"from mmlspark.lightgbm import LightGBMRegressor\n",
+							"import numpy as np\n",
+							"import pandas as pd\n",
+							"from pyspark.ml.feature import VectorAssembler\n",
+							"from pyspark.ml.regression import LinearRegression\n",
+							"from sklearn.datasets import load_boston"
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"## Prepare Dataset\n",
+							"We use [*Boston house price* dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_boston.html) \n",
+							". \n",
+							"The data was collected in 1978 from Boston area and consists of 506 entries with 14 features including the value of homes. \n",
+							"We use `sklearn.datasets` module to download it easily, then split the set into training and testing by 75/25."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"boston = load_boston()\n",
+							"\n",
+							"feature_cols = ['f' + str(i) for i in range(boston.data.shape[1])]\n",
+							"header = ['target'] + feature_cols\n",
+							"df = spark.createDataFrame(\n",
+							"    pd.DataFrame(data=np.column_stack((boston.target, boston.data)), columns=header)\n",
+							").repartition(1)\n",
+							"print(\"Dataframe has {} rows\".format(df.count()))\n",
+							"display(df.limit(10).toPandas())"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"train_data, test_data = df.randomSplit([0.75, 0.25], seed=42)\n",
+							"train_data.cache()\n",
+							"test_data.cache()"
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"Following is the summary of the training set."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"display(train_data.summary().toPandas())"
+						],
+						"outputs": [],
+						"execution_count": 4
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"Plot feature distributions over different target values (house prices in our case)."
+						]
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"features = train_data.columns[1:]\n",
+							"values = train_data.drop('target').toPandas()\n",
+							"ncols = 5\n",
+							"nrows = math.ceil(len(features) / ncols)\n",
+							"\n",
+							"yy = [r['target'] for r in train_data.select('target').collect()]\n",
+							"\n",
+							"f, axes = plt.subplots(nrows, ncols, sharey=True, figsize=(30,10))\n",
+							"f.tight_layout()\n",
+							"\n",
+							"for irow in range(nrows):\n",
+							"    axes[irow][0].set_ylabel('target')\n",
+							"    for icol in range(ncols):\n",
+							"        try:\n",
+							"            feat = features[irow*ncols + icol]\n",
+							"            xx = values[feat]\n",
+							"\n",
+							"            axes[irow][icol].scatter(xx, yy, s=10, alpha=0.25)\n",
+							"            axes[irow][icol].set_xlabel(feat)\n",
+							"            axes[irow][icol].get_yaxis().set_ticks([])\n",
+							"        except IndexError:\n",
+							"            f.delaxes(axes[irow][icol])"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"## Baseline - Spark MLlib Linear Regressor\n",
+							"\n",
+							"First, we set a baseline performance by using Linear Regressor in Spark MLlib."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"featurizer = VectorAssembler(\n",
+							"    inputCols=feature_cols,\n",
+							"    outputCol='features'\n",
+							")\n",
+							"lr_train_data = featurizer.transform(train_data)['target', 'features']\n",
+							"lr_test_data = featurizer.transform(test_data)['target', 'features']\n",
+							"display(lr_train_data.limit(10).toPandas())"
+						],
+						"outputs": [],
+						"execution_count": 6
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"# By default, `maxIter` is 100. Other params you may want to change include: `regParam`, `elasticNetParam`, etc.\n",
+							"lr = LinearRegression(\n",
+							"    labelCol='target',\n",
+							")\n",
+							"\n",
+							"lr_model = lr.fit(lr_train_data)\n",
+							"lr_predictions = lr_model.transform(lr_test_data)\n",
+							"\n",
+							"display(lr_predictions.limit(10).toPandas())"
+						],
+						"outputs": [],
+						"execution_count": 7
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"We evaluate the prediction result by using `mmlspark.train.ComputeModelStatistics` which returns four metrics:\n",
+							"* [MSE (Mean Squared Error)](https://en.wikipedia.org/wiki/Mean_squared_error)\n",
+							"* [RMSE (Root Mean Squared Error)](https://en.wikipedia.org/wiki/Root-mean-square_deviation) = sqrt(MSE)\n",
+							"* [R quared](https://en.wikipedia.org/wiki/Coefficient_of_determination)\n",
+							"* [MAE (Mean Absolute Error)](https://en.wikipedia.org/wiki/Mean_absolute_error)"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"metrics = ComputeModelStatistics(\n",
+							"    evaluationMetric='regression',\n",
+							"    labelCol='target',\n",
+							"    scoresCol='prediction'\n",
+							").transform(lr_predictions)\n",
+							"\n",
+							"results = metrics.toPandas()\n",
+							"results.insert(0, 'model', ['Spark MLlib - Linear Regression'])\n",
+							"display(results)"
+						],
+						"outputs": [],
+						"execution_count": 8
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"## Vowpal Wabbit"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"Perform VW-style feature hashing. Many types (numbers, string, bool, map of string to (number, string)) are supported."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"vw_featurizer = VowpalWabbitFeaturizer(\n",
+							"    inputCols=feature_cols,\n",
+							"    outputCol='features',\n",
+							")\n",
+							"vw_train_data = vw_featurizer.transform(train_data)['target', 'features']\n",
+							"vw_test_data = vw_featurizer.transform(test_data)['target', 'features']\n",
+							"display(vw_train_data.limit(10).toPandas())"
+						],
+						"outputs": [],
+						"execution_count": 9
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"See [VW wiki](https://github.com/vowpalWabbit/vowpal_wabbit/wiki/Command-Line-Arguments) for command line arguments."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"# Use the same number of iterations as Spark MLlib's Linear Regression (=100)\n",
+							"args = \"--holdout_off --loss_function quantile -l 7 -q :: --power_t 0.3\"\n",
+							"vwr = VowpalWabbitRegressor(\n",
+							"    labelCol='target',\n",
+							"    args=args,\n",
+							"    numPasses=100,\n",
+							")\n",
+							"\n",
+							"# To reduce number of partitions (which will effect performance), use `vw_train_data.repartition(1)`\n",
+							"vw_train_data_2 = vw_train_data.repartition(1).cache()\n",
+							"print(vw_train_data_2.count())\n",
+							"vw_model = vwr.fit(vw_train_data_2.repartition(1))\n",
+							"vw_predictions = vw_model.transform(vw_test_data)\n",
+							"\n",
+							"display(vw_predictions.limit(10).toPandas())"
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"metrics = ComputeModelStatistics(\n",
+							"    evaluationMetric='regression',\n",
+							"    labelCol='target',\n",
+							"    scoresCol='prediction'\n",
+							").transform(vw_predictions)\n",
+							"\n",
+							"vw_result = metrics.toPandas()\n",
+							"vw_result.insert(0, 'model', ['Vowpal Wabbit'])\n",
+							"results = results.append(\n",
+							"    vw_result,\n",
+							"    ignore_index=True\n",
+							")\n",
+							"display(results)"
+						],
+						"outputs": [],
+						"execution_count": 11
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"## LightGBM"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"lgr = LightGBMRegressor(\n",
+							"    objective='quantile',\n",
+							"    alpha=0.2,\n",
+							"    learningRate=0.3,\n",
+							"    numLeaves=31,\n",
+							"    labelCol='target',\n",
+							"    numIterations=100,\n",
+							")\n",
+							"\n",
+							"# Using one partition since the training dataset is very small\n",
+							"repartitioned_data = lr_train_data.repartition(1).cache()\n",
+							"print(repartitioned_data.count())\n",
+							"lg_model = lgr.fit(repartitioned_data)\n",
+							"lg_predictions = lg_model.transform(lr_test_data)\n",
+							"\n",
+							"display(lg_predictions.limit(10).toPandas())"
+						],
+						"outputs": [],
+						"execution_count": 12
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"metrics = ComputeModelStatistics(\n",
+							"    evaluationMetric='regression',\n",
+							"    labelCol='target',\n",
+							"    scoresCol='prediction'\n",
+							").transform(lg_predictions)\n",
+							"\n",
+							"lg_result = metrics.toPandas()\n",
+							"lg_result.insert(0, 'model', ['LightGBM'])\n",
+							"results = results.append(\n",
+							"    lg_result,\n",
+							"    ignore_index=True\n",
+							")\n",
+							"display(results)"
+						],
+						"outputs": [],
+						"execution_count": 13
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"Following figure shows the actual-vs.-prediction graphs of the results:\n",
+							"\n",
+							"<img width=\"1102\" alt=\"lr-vw-lg\" src=\"https://user-images.githubusercontent.com/42475935/64071975-4c3e9600-cc54-11e9-8b1f-9a1ee300f445.png\">"
+						]
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"cmap = get_cmap('YlOrRd')\n",
+							"\n",
+							"target = np.array(test_data.select('target').collect()).flatten()\n",
+							"model_preds = [\n",
+							"    (\"Spark MLlib Linear Regression\", lr_predictions),\n",
+							"    (\"Vowpal Wabbit\", vw_predictions),\n",
+							"    (\"LightGBM\", lg_predictions)\n",
+							"]"
+						],
+						"outputs": [],
+						"execution_count": 14
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": true
+						},
+						"source": [
+							"f, axes = plt.subplots(1, len(model_preds), sharey=True, figsize=(18, 6))\r\n",
+							"f.tight_layout()\r\n",
+							"\r\n",
+							"for i, (model_name, preds) in enumerate(model_preds):\r\n",
+							"    preds = np.array(preds.select('prediction').collect()).flatten()\r\n",
+							"    err = np.absolute(preds - target)\r\n",
+							"\r\n",
+							"    norm = Normalize()\r\n",
+							"    clrs = cmap(np.asarray(norm(err)))[:, :-1]\r\n",
+							"    axes[i].scatter(preds, target, s=60, c=clrs, edgecolors='#888888', alpha=0.75)\r\n",
+							"    axes[i].plot((0, 60), (0, 60), linestyle='--', color='#888888')\r\n",
+							"    axes[i].set_xlabel('Predicted values')\r\n",
+							"    if i ==0:\r\n",
+							"        axes[i].set_ylabel('Actual values')\r\n",
+							"    axes[i].set_title(model_name)\r\n",
+							"plt.show()"
+						],
+						"outputs": [],
+						"execution_count": 15
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Clean up resources\r\n",
+							"To ensure the Spark instance is shut down, end any connected sessions(notebooks). The pool shuts down when the **idle time** specified in the Apache Spark pool is reached. You can also select **stop session** from the status bar at the upper right of the notebook.\r\n",
+							"\r\n",
+							"![stopsession](https://adsnotebookrelease.blob.core.windows.net/adsnotebookrelease/adsnotebook/image/stopsession.png)"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Next steps\r\n",
+							"\r\n",
+							"* [Check out Synapse sample notebooks](https://github.com/Azure-Samples/Synapse/tree/main/MachineLearning) \r\n",
+							"* [MMLSpark GitHub Repo](https://github.com/Azure/mmlspark)"
+						]
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Notebook 1')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"metadata": {
+					"language_info": {
+						"name": "python"
+					}
+				},
+				"cells": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SampleSpark')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 5
+				},
+				"autoScale": {
+					"enabled": false,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 3,
+				"nodeSize": "Medium",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.1",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "eastus"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/core24')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 5
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "XLarge",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.1",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "eastus"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/newdedicatedsql')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "eastus"
+		}
+	]
+}
